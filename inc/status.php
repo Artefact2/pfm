@@ -28,7 +28,7 @@ function status(array &$pf, $date = 'now') {
 	$totalv = 0;
 	$totalin = 0;
 	foreach($agg as $t => &$l) {
-		if($l['qty'] !== 0) {
+		if($l['qty']) {
 			$l['price'] = get_quote($pf, $t, $date);
 		} else $l['price'] = 0.0;
 		
@@ -37,18 +37,17 @@ function status(array &$pf, $date = 'now') {
 	}
 	
 	foreach($pf['lines'] as $line) {
-		if(!isset($agg[$line['ticker']]) || $agg[$line['ticker']]['qty'] === 0.0) continue;
 		$a = $agg[$line['ticker']];
 		
 		print_row($fmt, [
 			'Tkr' => $line['ticker'],
-			'Price' => (float)$a['price'],
+			'Price' => $a['qty'] ? (float)$a['price'] : '',
 			'Quantity' => (float)$a['qty'],
 			'Money in' => (float)$a['in'],
-			'Value' => (float)($a['qty']*$a['price']),
+			'Value' => $a['qty'] ? (float)($a['qty']*$a['price']) : '',
 			'Gain' => (float)($a['qty']*$a['price'] - $a['in']),
-			'%Wgt' => 100.0 * $a['qty']*$a['price'] / $totalv,
-			'Perf' => 100.0 * ($a['price'] - $a['in']/$a['qty']) / ($a['in']/$a['qty']),
+			'%Wgt' => $a['qty'] ? 100.0 * $a['qty']*$a['price'] / $totalv : '',
+			'Perf' => $a['qty'] ? 100.0 * ($a['price'] - $a['in']/$a['qty']) / ($a['in']/$a['qty']) : '',
 		]);
 	}
 
@@ -61,4 +60,154 @@ function status(array &$pf, $date = 'now') {
 		'Gain' => $totalv - $totalin,
 		'Perf' => $totalin !== 0 ? 100.0 * ($totalv - $totalin) / $totalin : 0,
 	]);
+}
+
+function perf(array &$pf, $date = 'now') {	
+	static $fmt = null;
+	static $periods = null;
+
+	$ts = strtotime($date);
+	
+	if($fmt === null) {
+		$fmt = [
+			'Ticker' => [ '%8s' ],
+		];
+
+		$startmonth = strtotime(date('Y-m-01', $ts));
+		$periods[] = [
+			'MtD', $startmonth, $ts
+		];
+
+		for($i = 0; $i < 3; ++$i) {
+			$prevmonth = strtotime('-1 month', $startmonth);
+			$periods[] = [
+				date('M', $prevmonth), $prevmonth, $startmonth
+			];
+			$startmonth = $prevmonth;
+		}
+
+		$startyear = strtotime(date('Y-01-01', $ts));
+		$periods[] = [
+			'YtD', $startyear, $ts
+		];
+
+		for($i = 0; $i < 3; ++$i) {
+			$prevyear = strtotime('-1 year', $startyear);
+			$periods[] = [
+				date('Y', $prevyear), $prevyear, $startyear
+			];
+			$startyear = $prevyear;
+		}
+
+		$periods[] = [
+			'All', 0, $ts
+		];
+
+		foreach($periods as $p) {
+			$fmt[$p[0]] = [
+				'%6s', '%6.2f'
+			];
+		}
+	}
+
+	print_header($fmt);
+	print_sep($fmt);
+
+	$aggs = [];
+	
+	foreach($periods as $p) {
+		for($i = 1; $i <= 2; ++$i) {
+			if(!isset($aggs[$p[$i]])) {
+				$aggs[$p[$i]] = aggregate_tx($pf, [ 'before' => $p[$i] ]);
+			}
+		}
+	}
+
+	foreach($aggs as $k => &$a) {
+		foreach($a as $ticker => &$l) {
+			$l['price'] = get_quote($pf, $ticker, $k);
+		}
+	}
+	unset($a, $l);
+
+	$totals = [];
+	foreach($aggs as $t => $a) {
+		$totals[$t] = [
+			'in' => 0.0,
+			'value' => 0.0,
+		];
+		
+		foreach($a as $l) {
+			$totals[$t]['in'] += $l['in'];
+			$totals[$t]['value'] += $l['qty']*$l['price'];
+		}
+	}
+
+	foreach($pf['lines'] as $l) {
+		$t = $l['ticker'];
+		$show = false;
+		foreach($aggs as $a) {
+			if(isset($a[$t]) && $a[$t]['qty'] > 0) {
+				$show = true;
+				break;
+			}
+		}
+		if($show === false) continue;
+
+		$row = [ 'Ticker' => $t ];
+
+		foreach($periods as $p) {
+			list($k, $start, $end) = $p;
+			if(!isset($aggs[$end][$t])) continue;
+			if(!isset($aggs[$start][$t])) {
+				$aggs[$start][$t] = [
+					'qty' => 0.0,
+					'in' => 0.0,
+					'price' => 0.0,
+				];
+			}
+			if(!$aggs[$start][$t]['qty'] && !$aggs[$end][$t]['qty']) continue;
+
+			$s = $aggs[$start][$t];
+			$e = $aggs[$end][$t];
+
+			$me = $e['qty'] * $e['price'];
+			$ms = $s['qty'] * $s['price'];
+
+			if($e['in'] > $s['in']) {
+				$ms += $e['in'] - $s['in'];
+			} else if($s['in'] > $e['in']) {
+				$me += $s['in'] - $e['in'];
+			}
+
+			$row[$k] = 100.0 * ($me - $ms) / $ms;
+		}
+
+		print_row($fmt, $row);
+	}
+
+	print_sep($fmt);
+
+	$row = [ 'Ticker' => 'TOTAL' ];
+	
+	foreach($periods as $p) {
+		list($k, $start, $end) = $p;
+
+		$me = $totals[$end]['value'];
+		$ie = $totals[$end]['in'];
+		$ms = $totals[$start]['value'];
+		$is = $totals[$start]['in'];
+
+		if($ie > $is) {
+			$ms += $ie - $is;
+		} else if($is > $ie) {
+			$me += $is - $ie;
+		}
+
+		if(!$ms) continue;
+		
+		$row[$k] = 100.0 * ($me - $ms) / $ms;
+	}
+
+	print_row($fmt, $row);
 }

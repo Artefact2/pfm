@@ -47,9 +47,13 @@ function ls_tx(array &$pf, array $filters = []) {
 	print_sep($fmt);
 
 	$ticker = $filters['ticker'] ?? null;
-	$before = isset($filters['before']) ? strtotime($filters['before']) : null;
+	$before = isset($filters['before']) ? (
+		is_string($filters['before']) ? strtotime($filters['before']) : $filters['before']
+	) : null;
 	if($before === false) fatal("Unparseable date: %s\n", $filters['before']);
-	$after = isset($filters['after']) ? strtotime($filters['after']) : null;
+	$after = isset($filters['after']) ? (
+		is_string($filters['after']) ? strtotime($filters['after']) : $filters['after']
+	) : null;
 	if($after === false) fatal("Unparseable date: %s\n", $filters['after']);
 	
 	foreach($pf['tx'] as $k => $tx) {
@@ -73,11 +77,13 @@ function ls_tx(array &$pf, array $filters = []) {
 function aggregate_tx(array &$pf, array $filters = []) {
 	$agg = [];
 
-	$before = isset($filters['before']) ? strtotime($filters['before']) : null;
+	$before = isset($filters['before']) ? (
+		is_string($filters['before']) ? strtotime($filters['before']) : $filters['before']
+	) : null;
 	if($before === false) fatal("Unparseable date: %s\n", $filters['before']);
 
 	foreach($pf['tx'] as $tx) {
-		if($before !== null && $tx['ts'] > $before) continue;
+		if($before !== null && $tx['ts'] >= $before) continue;
 		
 		$ticker = $tx['ticker'];
 		

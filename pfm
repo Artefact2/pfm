@@ -10,6 +10,8 @@
 
 require realpath(__DIR__).'/inc/inc.php';
 
+ob_start();
+
 $pfp = get_pf_path();
 $pf = load_pf($pfp);
 
@@ -33,8 +35,12 @@ foreach($argv as $arg) {
 
 switch($cmd) {
 
-case  'status':
+case 'status':
 	status($pf, $args['at'] ?? 'now');
+	break;
+
+case 'perf':
+	perf($pf, $args['at'] ?? 'now');
 	break;
 
 case 'add-line':
@@ -104,6 +110,7 @@ default:
 	fprintf(STDERR, "Usage:\n");
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
+	fprintf(STDERR, "%s perf [at:<date>]\n", $me);
 	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);

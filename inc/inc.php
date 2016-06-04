@@ -83,8 +83,10 @@ function print_row(array $fmt, array $row) {
 }
 
 function print_sep(array $fmt) {
-	echo strtr(sprintf(
+	$sep = strtr(sprintf(
 		implode(' |', array_column($fmt, 0))."\n",
 		...array_fill(0, count($fmt), '')
 	), '| ', '+-');
+	assert(strlen($sep) <= 81);
+	echo $sep;
 }

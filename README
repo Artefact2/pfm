@@ -1,0 +1,9 @@
+# pfm
+
+A simple command-line stock portfolio manager.
+
+Released under the WTFPLv2 license.
+
+## Dependencies
+
+* PHP ≥ 7 (cli)
