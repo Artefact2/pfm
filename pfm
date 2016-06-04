@@ -1,0 +1,117 @@
+#!/usr/bin/env php
+<?php
+/* Author: Romain Dal Maso <artefact2@gmail.com>
+ *
+ * This program is free software. It comes without any warranty, to the
+ * extent permitted by applicable law. You can redistribute it and/or
+ * modify it under the terms of the Do What The Fuck You Want To Public
+ * License, Version 2, as published by Sam Hocevar. See
+ * http://sam.zoy.org/wtfpl/COPYING for more details. */
+
+require realpath(__DIR__).'/inc/inc.php';
+
+$pfp = get_pf_path();
+$pf = load_pf($pfp);
+
+if($argc === 1) {
+	$argv[] = 'status';
+	++$argc;
+}
+
+$me = array_shift($argv);
+$cmd = array_shift($argv);
+
+$args = [];
+foreach($argv as $arg) {
+	if(strpos($arg, ':') === false) {
+		$args[] = $arg;
+	} else {
+		list($k, $v) = explode(':', $arg, 2);
+		$args[$k] = $v;
+	}
+}
+
+switch($cmd) {
+
+case  'status':
+	status($pf, $args['at'] ?? 'now');
+	break;
+
+case 'add-line':
+	foreach([ 'name', 'ticker', 'currency' ] as $k) {
+		isset($args[$k]) || fatal("Missing argument for add-line: %s\n", $k);
+	}
+	add_line($pf, $args['name'], $args['ticker'], $args['currency'], $args);
+	break;
+
+case 'rm-line':
+	isset($args['ticker']) || fatal("Missing argument for rm-line: ticker\n");
+	rm_line($pf, $args['ticker']);
+	break;
+
+case 'ls-lines':
+	ls_lines($pf);
+	break;
+
+case 'add-tx':
+	isset($args['ticker']) || fatal("Missing argument for add-tx: ticker\n");
+	if(isset($args['buy']) && isset($args['sell'])) fatal("Too many arguments for add-tx: buy and sell\n");
+	$nargs = 0;
+	if(isset($args['buy']) || isset($args['sell'])) {
+		++$nargs;
+		$qty = floatval($args['buy'] ?? -$args['sell']);
+
+		if($qty > 0 && isset($args['total'])) {
+			$args['total'] = -abs(floatval($args['total']));
+		}
+	}
+	if(isset($args['price'])) {
+		++$nargs;
+		$price = floatval($args['price']);
+	}
+	if(isset($args['fee'])) {
+		++$nargs;
+		$fee = floatval($args['fee']);
+	}
+	if(isset($args['total'])) {
+		++$nargs;
+		$total = floatval($args['total']);
+	}
+	
+	if($nargs !== 3) fatal("add-tx: must have three of: (buy|sell), price, fee, total\n");
+
+	if(!isset($qty)) {
+		$qty = -($total + $fee) / $price;
+	} else if(!isset($price)) {
+		$price = -($total + $fee) / $qty;
+	} else if(!isset($fee)) {
+		$fee = -$qty*$price - $total;
+	}
+
+	add_tx($pf, $args['ticker'], $qty, $price, $fee, $args['date'] ?? 'now');
+	break;
+
+case 'rm-tx':
+	if($args === []) fatal("rm-tx: expecting at least one txid.\n");
+	rm_tx($pf, $args);
+	break;
+
+case 'ls-tx':
+	ls_tx($pf, $args);
+	break;
+
+default:
+	fprintf(STDERR, "Usage:\n");
+	fprintf(STDERR, "%s\n", $me);
+	fprintf(STDERR, "%s status [at:<date>]\n", $me);
+	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
+	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
+	fprintf(STDERR, "%s ls-lines\n", $me);
+	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
+	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
+	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
+	die(2);
+	
+}
+
+save_pf($pf, $pfp);
