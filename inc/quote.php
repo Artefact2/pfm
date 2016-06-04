@@ -23,7 +23,7 @@ function get_quote($pf, $ticker, $date = 'now') {
 	}
 	$l = $pf['lines'][$ticker];
 
-	if($date === 'now') {
+	if($date === 'now' || (time() - $date) < 900) {
 		if(isset($l['yahoo'])) {
 			$q = get_yahoo_rt_quote($l['yahoo']);
 			if($q !== null) return $q;
@@ -52,7 +52,7 @@ function get_quote($pf, $ticker, $date = 'now') {
 }
 
 function get_yahoo_rt_quote($yahooticker) {
-	return get_cached_thing('yahoo-rt-'.$yahooticker, 900, function() use($yahooticker) {
+	return get_cached_thing('yahoo-rt-'.$yahooticker, -900, function() use($yahooticker) {
 			$price = @file_get_contents(sprintf('https://download.finance.yahoo.com/d/quotes.csv?s=%s&f=ab', $yahooticker));
 			if($price === false || !preg_match('%^([0-9]+(\.[0-9]+)?),([0-9]+(\.[0-9]+)?)$%m', $price, $m)) {
 				return null;
@@ -63,7 +63,7 @@ function get_yahoo_rt_quote($yahooticker) {
 }
 
 function get_yahoo_history($yahooticker) {
-	return get_cached_thing('yahoo-hist-'.$yahooticker, 3600, function() use($yahooticker) {
+	return get_cached_thing('yahoo-hist-'.$yahooticker, -3600, function() use($yahooticker) {
 			$csv = @file_get_contents($url = sprintf('https://ichart.finance.yahoo.com/table.csv?s=%s&c=1900', $yahooticker));
 			if($csv === false) {
 				return [];
@@ -109,7 +109,7 @@ function parse_crude_csv($csv) {
 }
 
 function get_geco_amf_id($isin) {
-	return get_cached_thing('geco-id-'.$isin, 31557600, function() use($isin) {
+	return get_cached_thing('geco-id-'.$isin, -31557600, function() use($isin) {
 			$c = curl_init(sprintf(
 				'http://geco.amf-france.org/bio/rech_part.aspx'
 				.'?varvalidform=on&CodeISIN=%s'
@@ -135,7 +135,7 @@ function get_geco_amf_id($isin) {
 function get_geco_amf_history(array $amfid, $ts) {
 	return get_cached_thing(
 		'geco-'.$amfid['NumProd'].'-'.$amfid['NumPart'].'-'.date('Y-m-d', $ts),
-		31557600,
+		-31557600,
 		function() use($amfid, $ts) {
 			$c = curl_init(sprintf(
 				'http://geco.amf-france.org/bio/info_part.aspx'
