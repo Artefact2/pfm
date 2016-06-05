@@ -12,6 +12,7 @@ require __DIR__.'/line.php';
 require __DIR__.'/tx.php';
 require __DIR__.'/status.php';
 require __DIR__.'/quote.php';
+require __DIR__.'/plot.php';
 
 function fatal(...$params) {
 	fprintf(STDERR, ...$params);
@@ -52,6 +53,17 @@ function get_cached_thing($id, $cutoff, callable $generate) {
 	$data = $generate();
 	file_put_contents($f, json_encode($data));
 	return $data;
+}
+
+function maybe_strtotime($dt, $now = null) {
+	if(is_numeric($dt)) {
+		/* Assume absolute timestamp */
+		return (int)$dt;
+	} else {
+		$ts = strtotime($dt, $now ?? time());
+		if($ts === false) fatal("Unparseable datetime: %s\n", $dt);
+		return $ts;
+	}
 }
 
 function print_header(array $fmt) {

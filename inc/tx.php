@@ -8,9 +8,7 @@
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
 function add_tx(array &$pf, $ticker, $buy, $price, $fee, $date) {
-	if(($ts = strtotime($date)) === false) {
-		fatal("add_tx: invalid date %s\n", $date);
-	}
+	$ts = maybe_strtotime($date);
 	
 	$pf['tx'][] = [
 		'ticker' => $ticker,
@@ -47,14 +45,8 @@ function ls_tx(array &$pf, array $filters = []) {
 	print_sep($fmt);
 
 	$ticker = $filters['ticker'] ?? null;
-	$before = isset($filters['before']) ? (
-		is_string($filters['before']) ? strtotime($filters['before']) : $filters['before']
-	) : null;
-	if($before === false) fatal("Unparseable date: %s\n", $filters['before']);
-	$after = isset($filters['after']) ? (
-		is_string($filters['after']) ? strtotime($filters['after']) : $filters['after']
-	) : null;
-	if($after === false) fatal("Unparseable date: %s\n", $filters['after']);
+	$before = isset($filters['before']) ? maybe_strtotime($filters['before']) : null;
+	$after = isset($filters['after']) ? maybe_strtotime($filters['after']) : null;
 	
 	foreach($pf['tx'] as $k => $tx) {
 		if($ticker !== null && $ticker !== $tx['ticker']) continue;
@@ -74,16 +66,13 @@ function ls_tx(array &$pf, array $filters = []) {
 	}
 }
 
-function aggregate_tx(array &$pf, array $filters = []) {
+function aggregate_tx(array $pf, array $filters = []) {
 	$agg = [];
 
-	$before = isset($filters['before']) ? (
-		is_string($filters['before']) ? strtotime($filters['before']) : $filters['before']
-	) : null;
-	if($before === false) fatal("Unparseable date: %s\n", $filters['before']);
+	$before = isset($filters['before']) ? maybe_strtotime($filters['before']) : null;
 
 	foreach($pf['tx'] as $tx) {
-		if($before !== null && $tx['ts'] >= $before) continue;
+		if($before !== null && $tx['ts'] > $before) continue;
 		
 		$ticker = $tx['ticker'];
 		

@@ -66,7 +66,7 @@ function perf(array &$pf, $date = 'now') {
 	static $fmt = null;
 	static $periods = null;
 
-	$ts = strtotime($date);
+	$ts = maybe_strtotime($date);
 	
 	if($fmt === null) {
 		$fmt = [

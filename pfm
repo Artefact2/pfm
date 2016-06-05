@@ -106,11 +106,25 @@ case 'ls-tx':
 	ls_tx($pf, $args);
 	break;
 
+case 'plot-perf':
+	$start = $args['start'] ?? '-1 year';
+	$end = $args['end'] ?? 'now';
+	$abs = $args['absolute'] ?? false;
+	$overlays = (isset($args['overlays']) && $args['overlays'] !== '') ? explode(',', $args['overlays']) : [];
+	
+	if($args['raw'] ?? false) {
+		tsv_perf($pf, STDOUT, $start, $end, $abs, $overlays);
+	} else {
+		plot_perf($pf, $start, $end, $abs, $overlays);
+	}
+	break;
+
 default:
 	fprintf(STDERR, "Usage:\n");
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
 	fprintf(STDERR, "%s perf [at:<date>]\n", $me);
+	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [overlays:<ticker>[,<ticker>[,…]]] [raw:0|1]\n", $me);
 	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);

@@ -7,10 +7,11 @@ Released under the WTFPLv2 license.
 # Dependencies
 
 * PHP ≥ 7 (cli)
+* Gnuplot
 
-# Usage
+# Screenshots
 
-## Status view (default)
+![](./img/perf-relative.png) ![](./img/perf-absolute.png)
 
 ~~~
 Silmeria ~ % pfm
@@ -27,6 +28,26 @@ Silmeria ~ % pfm
 ------+----------+-----------+-----------+-----------+-----------+-------+------
   TOT |          |           |  15650.07 |  15823.63 |    173.56 |       |  1.11
 ~~~
+
+~~~
+Silmeria ~ % pfm perf
+  Ticker |   MtD |   May |   Apr |   Mar |   YtD |  2015 |  2014 |  2013 |   All
+---------+-------+-------+-------+-------+-------+-------+-------+-------+------
+    500H | -0.36 |  1.63 |       |       |       |       |       |       |      
+     CEU | -1.21 |       |       |       | -1.21 |       |       |       | -1.21
+     CW8 |  0.27 |  3.40 |  0.46 |  0.15 |       |       |       |       |      
+    ESEH | -0.04 |       |       |       | -0.04 |       |       |       | -0.04
+     MTD |  0.28 |  1.07 | -1.03 |  0.48 |  2.18 |       |       |       |  2.18
+    SMAE | -0.20 |       |       |       | -0.20 |       |       |       | -0.20
+     UST | -1.71 |  7.46 | -4.55 |  0.54 | -7.26 |  1.25 |       |       | -6.26
+     WLD | -1.26 |  3.44 |  0.18 |  0.95 | -3.19 | -0.37 |       |       | -3.54
+---------+-------+-------+-------+-------+-------+-------+-------+-------+------
+   TOTAL | -0.54 |  3.56 | -0.46 |  0.43 |  1.00 |  0.44 |       |       |  1.11
+~~~
+
+# Usage
+
+## Status view (`status`, default)
 
 Parameters:
 
@@ -50,23 +71,7 @@ Columns:
 * `%Wgt`: weight of this line in your portfolio
 * `Perf`: overall performance of this line
 
-## Performance view
-
-~~~
-Silmeria ~ % pfm perf
-  Ticker |   MtD |   May |   Apr |   Mar |   YtD |  2015 |  2014 |  2013 |   All
----------+-------+-------+-------+-------+-------+-------+-------+-------+------
-    500H | -0.36 |  1.63 |       |       |       |       |       |       |      
-     CEU | -1.21 |       |       |       | -1.21 |       |       |       | -1.21
-     CW8 |  0.27 |  3.40 |  0.46 |  0.15 |       |       |       |       |      
-    ESEH | -0.04 |       |       |       | -0.04 |       |       |       | -0.04
-     MTD |  0.28 |  1.07 | -1.03 |  0.48 |  2.18 |       |       |       |  2.18
-    SMAE | -0.20 |       |       |       | -0.20 |       |       |       | -0.20
-     UST | -1.71 |  7.46 | -4.55 |  0.54 | -7.26 |  1.25 |       |       | -6.26
-     WLD | -1.26 |  3.44 |  0.18 |  0.95 | -3.19 | -0.37 |       |       | -3.54
----------+-------+-------+-------+-------+-------+-------+-------+-------+------
-   TOTAL | -0.54 |  3.56 | -0.46 |  0.43 |  1.00 |  0.44 |       |       |  1.11
-~~~
+## Performance view (`perf`)
 
 Parameters:
 
@@ -81,19 +86,21 @@ Columns:
 * `2015`, `2014`, `2013`: performance of this line over the last 3 years
 * `All`: overall performance of this line
 
-## Transactions view
+## Performance graph (`plot-perf`)
 
 ~~~
-Silmeria ~ % pfm ls-tx ticker:CW8      
-  TxID |  Tkr |       Date |  Act |      Price |   Quantity |     Fee |    Total
--------+------+------------+------+------------+------------+---------+---------
-     7 |  CW8 | 2016-01-23 |  Buy |   195.3400 |     2.0000 |    1.99 |     -393
-    10 |  CW8 | 2016-02-08 |  Buy |   182.8500 |     2.0000 |    1.99 |     -368
-    12 |  CW8 | 2016-02-18 |  Buy |   192.0000 |     8.0000 |    1.98 |    -1538
-    13 |  CW8 | 2016-03-03 |  Buy |   201.5400 |    11.0000 |    2.00 |    -2219
-    16 |  CW8 | 2016-04-08 |  Buy |   198.4600 |    12.0000 |    2.14 |    -2384
-    20 |  CW8 | 2016-06-01 | Sell |   208.0000 |    35.0000 |    6.55 |     7273
+Silmeria ~ % pfm plot-perf start:2016-01-01 overlays:CW8U
 ~~~
+
+Parameters:
+
+* `start:<date>`
+* `end:<date>`
+* `absolute:0|1`: default is relative (0), absolute will show buy/sell operations and overall portfolio value
+* `overlays:<tickers>`: comma-separated list of tickers to display, only works in relative mode
+* `raw:0|1`: if `1`, don't invoke `gnuplot` and print the raw data, useful if you want to use another tool to generate a chart
+
+## Transactions view (`ls-tx`)
 
 Parameters:
 
@@ -101,7 +108,7 @@ Parameters:
 * `before:<date>`: only show transactions before this date (`strtotime()`-formatted)
 * `after:<date>`: only show transactions after this date (`strtotime()`-formatted)
 
-## Add transaction
+## Add transaction (`add-tx`)
 
 ~~~
 Silmeria ~ % pfm add-tx ticker:SMAE date:2016-06-01 buy:24 price:121.78 total:2926.52
@@ -127,7 +134,7 @@ total = (-quantity) * price - fee
 Where quantity is positive for buying, negative for selling. When
 buying, set user-supplied `total` as negative.
 
-## Remove transaction(s)
+## Remove transaction(s) (`rm-tx`)
 
 ~~~
 Silmeria ~ % pfm rm-tx 7 10 12
@@ -135,7 +142,7 @@ Silmeria ~ % pfm rm-tx 7 10 12
 
 Get transaction IDs using `ls-tx`.
 
-## Lines view
+## Lines view (`ls-lines`)
 
 ~~~
 Silmeria ~ % pfm ls-lines        
@@ -144,7 +151,7 @@ Silmeria ~ % pfm ls-lines
            AMUNDI ETF MSCI WORLD UCITS ETF |  CW8 | EUR |  CW8.PA | FR0010756098
 ~~~
 
-## Add line
+## Add line (`add-line`)
 
 ~~~
 Silmeria ~ % pfm add-line ticker:CW8 yahoo:CW8.PA currency:EUR isin:FR0010756098 'name:AMUNDI ETF MSCI WORLD UCITS ETF'
@@ -158,7 +165,7 @@ Parameters:
 * `yahoo:<yahoo>`: optional, Yahoo Finance ticker (used for quotes & price history)
 * `isin:<isin>`: optional, ISIN code of the stock (used for quotes & price history)
 
-## Remove line
+## Remove line (`rm-line`)
 
 ~~~
 Silmeria ~ % pfm rm-line ticker:CW8

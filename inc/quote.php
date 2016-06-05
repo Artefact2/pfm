@@ -23,14 +23,14 @@ function get_quote($pf, $ticker, $date = 'now') {
 	}
 	$l = $pf['lines'][$ticker];
 
-	if($date === 'now' || (time() - $date) < 900) {
+	if($date === 'now' || date('Y-m-d', maybe_strtotime($date)) === date('Y-m-d')) {
 		if(isset($l['yahoo'])) {
 			$q = get_yahoo_rt_quote($l['yahoo']);
 			if($q !== null) return $q;
 		}
 	}
 
-	if(is_string($date)) $date = strtotime($date);
+	$date = maybe_strtotime($date);
 
 	if(isset($l['yahoo'])) {
 		$hist = get_yahoo_history($l['yahoo']);
@@ -80,8 +80,10 @@ function get_yahoo_history($yahooticker) {
 
 function find_in_history(array $hist, $ts) {
 	$prev = null;
+	$tgt = date('Y-m-d', $ts);
 
 	foreach($hist as $t => $p) {
+		if(abs($ts - $t) <= 172800 && date('Y-m-d', $t) === $tgt) return $p;
 		if($t > $ts) break;
 		$prev = $p;
 	}
