@@ -37,6 +37,7 @@ function status(array &$pf, $date = 'now') {
 	}
 	
 	foreach($pf['lines'] as $line) {
+		if(!isset($agg[$line['ticker']])) continue;
 		$a = $agg[$line['ticker']];
 		
 		print_row($fmt, [

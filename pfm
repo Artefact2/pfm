@@ -136,3 +136,4 @@ default:
 }
 
 save_pf($pf, $pfp);
+fwrite(STDOUT, "\r");

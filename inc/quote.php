@@ -63,7 +63,12 @@ function get_yahoo_rt_quote($yahooticker) {
 }
 
 function get_yahoo_history($yahooticker) {
-	return get_cached_thing('yahoo-hist-'.$yahooticker, -3600, function() use($yahooticker) {
+	static $tomorrow = null;
+	if($tomorrow === null) {
+		$tomorrow = strtotime('+1 day', strtotime(date('Y-m-d 00:00:00')));
+	}
+	
+	return get_cached_thing('yahoo-hist-'.$yahooticker, $tomorrow, function() use($yahooticker) {			
 			$csv = @file_get_contents($url = sprintf('https://ichart.finance.yahoo.com/table.csv?s=%s&c=1900', $yahooticker));
 			if($csv === false) {
 				return [];
@@ -71,7 +76,7 @@ function get_yahoo_history($yahooticker) {
 			$csv = parse_crude_csv($csv);
 			$hist = [];
 			foreach($csv as $line) {
-				$hist[strtotime($line['Date'])] = $line['Close'];
+				$hist[date('Y-m-d', strtotime($line['Date']))] = $line['Close'];
 			}
 			ksort($hist);
 			return $hist;
@@ -79,16 +84,15 @@ function get_yahoo_history($yahooticker) {
 }
 
 function find_in_history(array $hist, $ts) {
-	$prev = null;
-	$tgt = date('Y-m-d', $ts);
+	$k = date('Y-m-d', $ts);
+	$i = 0;
 
-	foreach($hist as $t => $p) {
-		if(abs($ts - $t) <= 172800 && date('Y-m-d', $t) === $tgt) return $p;
-		if($t > $ts) break;
-		$prev = $p;
+	for($i = 0; $i < 7; ++$i) {
+		if(isset($hist[$k])) return $hist[$k];
+		$k = date('Y-m-d', $ts = strtotime('-1 day', $ts));
 	}
-	
-	return $prev;
+
+	return null;
 }
 
 /* Parse CSV data. Does not support escaping of any kind. Assumes the
@@ -135,10 +139,17 @@ function get_geco_amf_id($isin) {
 }
 
 function get_geco_amf_history(array $amfid, $ts) {
+	static $tomorrow = null;
+	if($tomorrow === null) {
+		$tomorrow = strtotime('+1 day', strtotime(date('Y-m-d 00:00:00')));
+	}
+	
 	return get_cached_thing(
-		'geco-'.$amfid['NumProd'].'-'.$amfid['NumPart'].'-'.date('Y-m-d', $ts),
-		-31557600,
+		'geco-'.$amfid['NumProd'].'-'.$amfid['NumPart'].'-'.date('Y-W', $ts),
+		time() - $ts > 604800 ? -31557600 : $tomorrow,
 		function() use($amfid, $ts) {
+			$ts = strtotime(date('Y-m-d', $ts));
+			
 			$c = curl_init(sprintf(
 				'http://geco.amf-france.org/bio/info_part.aspx'
 				.'?SEC=VL'
@@ -146,8 +157,8 @@ function get_geco_amf_history(array $amfid, $ts) {
 				.'&DateDeb=%s&DateFin=%s&btnvalid=OK',
 				$amfid['NumProd'],
 				$amfid['NumPart'],
-				date('d%2\Fm%2\FY', $ts - 86400*7),
-				date('d%2\Fm%2\FY', $ts + 86400*7)
+				date('d%2\Fm%2\FY', strtotime('-7 days', $ts)),
+				date('d%2\Fm%2\FY', strtotime('+7 days', $ts))
 			));
 			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
@@ -156,9 +167,9 @@ function get_geco_amf_history(array $amfid, $ts) {
 
 			$hist = [];
 			foreach($matches[0] as $k => $d) {
-				$ts = strtotime($matches[3][$k].'-'.$matches[2][$k].'-'.$matches[1][$k]);
+				$date = $matches[3][$k].'-'.$matches[2][$k].'-'.$matches[1][$k];
 				$val = floatval(strtr($matches[4][$k], ',', '.'));
-				$hist[$ts] = $val;
+				$hist[$date] = $val;
 			}
 
 			ksort($hist);
