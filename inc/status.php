@@ -74,6 +74,11 @@ function perf(array &$pf, $date = 'now') {
 			'Ticker' => [ '%8s' ],
 		];
 
+		$startday = strtotime('-1 day', strtotime(date('Y-m-d', $ts)));
+		$periods[] = [
+			'Day', $startday, $ts
+		];
+
 		$startmonth = strtotime(date('Y-m-01', $ts));
 		$periods[] = [
 			'MtD', $startmonth, $ts
@@ -99,10 +104,6 @@ function perf(array &$pf, $date = 'now') {
 			];
 			$startyear = $prevyear;
 		}
-
-		$periods[] = [
-			'All', 0, $ts
-		];
 
 		foreach($periods as $p) {
 			$fmt[$p[0]] = [
