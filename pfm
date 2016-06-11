@@ -119,6 +119,11 @@ case 'plot-perf':
 	}
 	break;
 
+case 'get-quote':
+	if(!isset($args['ticker'])) fatal("Missing argument ticker\n");
+	printf("%f\n", (float)get_quote($pf, $args['ticker'], $args['at'] ?? 'now'));
+	break;
+
 default:
 	fprintf(STDERR, "Usage:\n");
 	fprintf(STDERR, "%s\n", $me);
@@ -131,6 +136,7 @@ default:
 	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
 	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
 	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
+	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);
 	die(2);
 	
 }
