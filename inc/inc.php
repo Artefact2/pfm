@@ -43,9 +43,8 @@ function get_cached_thing($id, $cutoff, callable $generate) {
 	$f = $cachedir.'/'.$id;
 
 	if(file_exists($f)) {
-		$m = filemtime($f);
-		
-		if(($cutoff >= 0 && $m < $cutoff) || ($cutoff < 0 && (time() - $m) < -$cutoff)) {
+		if($cutoff < 0) $cutoff = filemtime($f) - $cutoff;
+		if(time() <= $cutoff) {
 			return json_decode(file_get_contents($f), true);
 		}
 	}
