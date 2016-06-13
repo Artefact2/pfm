@@ -25,12 +25,12 @@ function notice(...$params) {
 
 /* Get some cached data, or generate the data and cache it.
  *
- * @param $cutoff a timestamp or a negative integer. If timestamp,
- * generate new data if cached data is older than this timestamp. If
- * negative integer, generate new data if cached data is older than
- * $cutoff seconds.
+ * @param $ttl a timestamp or a negative integer. If timestamp,
+ * generate new data once cached data is older than this timestamp. If
+ * negative integer, generate new data when cached data gets older than
+ * $ttl seconds.
  */
-function get_cached_thing($id, $cutoff, callable $generate) {
+function get_cached_thing($id, $ttl, callable $generate) {
 	static $cachedir = null;
 
 	if($cachedir === null) {
@@ -43,8 +43,7 @@ function get_cached_thing($id, $cutoff, callable $generate) {
 	$f = $cachedir.'/'.$id;
 
 	if(file_exists($f)) {
-		if($cutoff < 0) $cutoff = filemtime($f) - $cutoff;
-		if(time() <= $cutoff) {
+		if(time() < filemtime($f)) {
 			return json_decode(file_get_contents($f), true);
 		}
 	}
@@ -52,6 +51,7 @@ function get_cached_thing($id, $cutoff, callable $generate) {
 	fwrite(STDOUT, '.');
 	$data = $generate();
 	file_put_contents($f, json_encode($data));
+	touch($f, $ttl > 0 ? $ttl : time() - $ttl);
 	return $data;
 }
 
