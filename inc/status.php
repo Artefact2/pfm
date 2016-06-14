@@ -84,6 +84,11 @@ function perf(array &$pf, $date = 'now') {
 			'MtD', $startmonth, $ts
 		];
 
+		$startyear = strtotime(date('Y-01-01', $ts));
+		$periods[] = [
+			'YtD', $startyear, $ts
+		];
+
 		for($i = 0; $i < 3; ++$i) {
 			$prevmonth = strtotime('-1 month', $startmonth);
 			$periods[] = [
@@ -92,12 +97,7 @@ function perf(array &$pf, $date = 'now') {
 			$startmonth = $prevmonth;
 		}
 
-		$startyear = strtotime(date('Y-01-01', $ts));
-		$periods[] = [
-			'YtD', $startyear, $ts
-		];
-
-		for($i = 0; $i < 3; ++$i) {
+		for($i = 0; $i < 2; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
 				date('Y', $prevyear), $prevyear, $startyear
@@ -105,9 +105,13 @@ function perf(array &$pf, $date = 'now') {
 			$startyear = $prevyear;
 		}
 
+		$periods[] = [
+			'All', 0, $ts
+		];
+
 		foreach($periods as $p) {
 			$fmt[$p[0]] = [
-				'%6s', '%6.2f'
+				'%6s', '%s'
 			];
 		}
 	}
@@ -182,7 +186,7 @@ function perf(array &$pf, $date = 'now') {
 				$me += $s['in'] - $e['in'];
 			}
 
-			$row[$k] = 100.0 * ($me - $ms) / $ms;
+			$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, '%6.2f');
 		}
 
 		print_row($fmt, $row);
@@ -208,7 +212,7 @@ function perf(array &$pf, $date = 'now') {
 
 		if(!$ms) continue;
 		
-		$row[$k] = 100.0 * ($me - $ms) / $ms;
+		$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, '%6.2f');
 	}
 
 	print_row($fmt, $row);

@@ -102,3 +102,32 @@ function print_sep(array $fmt) {
 	assert(strlen($sep) <= 81);
 	echo $sep;
 }
+
+function colorize_percentage($pc, $fmt = '%6.2f', $hi = 3, $low = .5, $neghi = null, $neglow = null) {
+	static $colorseqs = null;
+	if($colorseqs === null) {
+		$colorseqs = [
+			'bold' => shell_exec('tput bold'),
+			'red' => shell_exec('tput setaf 1'),
+			'green' => shell_exec('tput setaf 2'),
+			'magenta' => shell_exec('tput setaf 5'),
+			'cyan' => shell_exec('tput setaf 6'),
+			'reset' => shell_exec('tput sgr0'),
+		];
+	}
+
+	if($neghi === null) $neghi = 100. / (1 + $hi / 100.) - 100;
+	if($neglow === null) $neglow = 100. / (1 + $low / 100.) - 100;
+
+	$out = $colorseqs['bold'];
+	
+	if($pc > $hi) $out .= $colorseqs['green'];
+	else if($pc > $low) $out .= $colorseqs['cyan'];
+	else if($pc < $neghi) $out .= $colorseqs['magenta'];
+	else if($pc < $neglow) $out .= $colorseqs['red'];
+	
+	$out .= sprintf($fmt, $pc);
+	$out .= $colorseqs['reset'];
+	
+	return $out;
+}
