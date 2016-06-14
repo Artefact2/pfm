@@ -28,7 +28,8 @@ function tsv_perf(array $pf, $stream, $start, $end, $absolute = true, array $ove
 
 	$hold = [];
 	$obases = [];
-	
+
+	/* XXX: refactor with iterate_tx */
 	while($start <= $end) {
 		while($tx !== false && $tx['ts'] <= $start) {
 			if(!isset($hold[$tx['ticker']])) {
@@ -108,6 +109,7 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 	fwrite($sf, "set mytics 2\n");
 	fwrite($sf, "set xtics format '%Y-%m-%d' rotate by -90\n");
 	fwrite($sf, "show grid\n");
+	fwrite($sf, "set key outside\n");
 	fprintf(
 		$sf,
 		"plot '%s' using 1:(\$2+\$3):2 with filledcurves above linecolor '#008000' title 'Gains', '%s' using 1:(\$2+\$3):2 with filledcurves below linecolor '#800000' title 'Losses'",
@@ -130,4 +132,103 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 	fwrite($sf, "\n");
 	fclose($sf);
 	unlink($dat);
+}
+
+function tsv_pf(array $pf, $out, $start, $end) {
+	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
+		fprintf($out, "%s", date('Y-m-d', $ts));
+		foreach($pf['lines'] as $tkr => $l) {
+			if(!isset($d['agg'][$tkr]) || !$d['agg'][$tkr]['qty']) {
+				$value = 0;
+			} else {
+				$value = $d['agg'][$tkr]['qty'] * get_quote($pf, $tkr, $ts);
+			}
+
+			fprintf($out, "\t%f", $value);
+		}
+		fprintf($out, "\n");
+	}
+}
+
+function plot_pf(array $pf, $start, $end, $absolute = true) {
+	$dat = tempnam(sys_get_temp_dir(), 'pfm');
+	tsv_pf($pf, $datf = fopen($dat, 'wb'), $start, $end);
+	fclose($datf);
+	
+	$sf = popen('gnuplot -p', 'wb');
+	fwrite($sf, "set xdata time\n");
+	fwrite($sf, "set timefmt '%Y-%m-%d'\n");
+	fprintf($sf, "set xrange ['%s':'%s']\n", date('Y-m-d', maybe_strtotime($start)), date('Y-m-d', maybe_strtotime($end)));
+	fwrite($sf, "set style fill solid 0.5 noborder\n");
+	fwrite($sf, "set grid xtics\n");
+	fwrite($sf, "set grid ytics\n");
+	fwrite($sf, "set grid mytics\n");
+	fwrite($sf, "set mytics 2\n");
+	fwrite($sf, "set xtics format '%Y-%m-%d' rotate by -90\n");
+	fwrite($sf, "show grid\n");
+	fwrite($sf, "set key outside\n");
+
+	if(!$absolute) {
+		fwrite($sf, "set yrange [0:100]\n");
+		$tot = '$'.implode('+$', range(2, count($pf['lines'])+1));
+		$tot = '(('.$tot.')/100)';
+	}
+
+
+	fwrite($sf, "plot ");
+	$i = 2;
+	$base = '0';
+	$n = count($pf['lines']);
+	
+	foreach($pf['lines'] as $tkr => $l) {
+		if($i > 2) fwrite($sf, ', ');
+		
+		fprintf(
+			$sf,
+			"'%s' using 1:((%s+\$%d)/(%s)):((%s)/(%s)) with filledcurves linecolor '%s' title '%s'",
+			$dat,
+			$base,
+			$i,
+			$absolute ? 1 : $tot,
+			$base,
+			$absolute ? 1 : $tot,
+			$color = hsl_to_rgb(($i - 2) / $n, 1.0, 0.4),
+			$tkr
+		);
+
+		$base .= '+$'.$i;
+		
+		++$i;
+	}
+
+	/* XXX: colorize properly */
+	
+	fwrite($sf, "\n");
+	fclose($sf);
+	unlink($dat);
+}
+
+function hsl_to_rgb($h, $s, $l) {
+	$h = fmod($h, 1.0) * 6.0;
+
+	$c = (1.0 - abs(2.0 * $l - 1.0)) * $s;
+	$x = $c * (1.0 - abs(fmod($h, 2.0) - 1));
+	
+	list($r, $g, $b) = [
+		[ $c, $x, 0.0 ],
+		[ $x, $c, 0.0 ],
+		[ 0.0, $c, $x ],
+		[ 0.0, $x, $c ],
+		[ $x, 0.0, $c ],
+		[ $c, 0.0, $x ],
+		[ 0.0, 0.0, 0.0 ]
+	][floor($h)];
+
+	$m = $l - $c / 2.0;
+	return sprintf(
+		'#%02X%02X%02X',
+		floor(255.0 * ($r + $m)),
+		floor(255.0 * ($g + $m)),
+		floor(255.0 * ($b + $m))
+	);
 }

@@ -89,3 +89,47 @@ function aggregate_tx(array $pf, array $filters = []) {
 	
 	return $agg;
 }
+
+function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
+	$start = maybe_strtotime($start);
+	$end = maybe_strtotime($end);
+
+	$txs = $pf['tx'];
+	reset($txs);
+	$tx = current($txs);
+	$in = 0;
+
+	$agg = [];
+	
+	while($start <= $end) {
+		$delta = [];
+		
+		while($tx !== false && $tx['ts'] <= $start) {
+			$tkr = $tx['ticker'];
+			
+			foreach([ &$agg, &$delta ] as &$a) {
+				if(isset($a[$tkr])) continue;
+				
+				$a[$tx['ticker']] = [
+					'in' => 0.0,
+					'qty' => 0.0,
+				];
+			}
+
+			$agg[$tkr]['qty'] += $tx['buy'];
+			$delta[$tkr]['qty'] += $tx['buy'];
+			
+			$agg[$tkr]['in'] += ($deltain = $tx['fee'] + $tx['buy'] * $tx['price']);
+			$delta[$tkr]['in'] += $deltain;
+			
+			$tx = next($txs);
+		}
+
+		yield $start => [
+			'agg' => $agg,
+			'delta' => $delta,
+		];
+		
+		$start = strtotime($interval, $start);
+	}
+}

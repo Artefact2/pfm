@@ -119,6 +119,17 @@ case 'plot-perf':
 	}
 	break;
 
+case 'plot-pf':
+	$start = $args['start'] ?? '-1 year';
+	$end = $args['end'] ?? 'now';
+	
+	if($args['raw'] ?? false) {
+		tsv_pf($pf, STDOUT, $start, $end);
+	} else {
+		plot_pf($pf, $start, $end, $args['absolute'] ?? true);
+	}
+	break;
+
 case 'get-quote':
 	if(!isset($args['ticker'])) fatal("Missing argument ticker\n");
 	printf("%f\n", (float)get_quote($pf, $args['ticker'], $args['at'] ?? 'now'));
@@ -129,7 +140,6 @@ default:
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
 	fprintf(STDERR, "%s perf [at:<date>]\n", $me);
-	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [overlays:<ticker>[,<ticker>[,…]]] [raw:0|1]\n", $me);
 	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);
@@ -137,6 +147,8 @@ default:
 	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
 	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
 	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);
+	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [overlays:<ticker>[,<ticker>[,…]]] [raw:0|1]\n", $me);
+	fprintf(STDERR, "%s plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
 	die(2);
 	
 }
