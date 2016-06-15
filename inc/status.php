@@ -16,7 +16,7 @@ function status(array &$pf, $date = 'now') {
 		'Value' => [ '%10s', '%10.2f' ],
 		'Gain' => [ '%10s', '%10.2f' ],
 		'%Wgt' => [ '%6s', '%6.2f' ],
-		'Perf' => [ '%6s', '%6.2f' ],
+		'Perf' => [ '%6s', '%6.1f' ],
 	];
 
 	print_header($fmt);
@@ -63,36 +63,39 @@ function status(array &$pf, $date = 'now') {
 	]);
 }
 
-function perf(array &$pf, $date = 'now') {	
-	static $fmt = null;
-	static $periods = null;
-
+function perf(array &$pf, $date = 'now', $columns = 'default') {
 	$ts = maybe_strtotime($date);
-	
-	if($fmt === null) {
-		$fmt = [
-			'Ticker' => [ '%8s' ],
-		];
+    
+	$fmt = [
+		'Ticker' => [ '%8s' ],
+	];
 
+	switch($columns) {
+		
+	case 'default':
 		$startday = strtotime('-1 day', strtotime(date('Y-m-d', $ts)));
 		$periods[] = [
-			'Day', $startday, $ts
+			'Day', $startday, $ts, '%6.2f', '%6s'
+		];
+		
+		$periods[] = [
+			'WtD', strtotime('last sunday', $ts), $ts, '%5.1f', '%5s'
 		];
 
 		$startmonth = strtotime(date('Y-m-01', $ts));
 		$periods[] = [
-			'MtD', $startmonth, $ts
+			'MtD', $startmonth, $ts, '%5.1f', '%5s'
 		];
 
 		$startyear = strtotime(date('Y-01-01', $ts));
 		$periods[] = [
-			'YtD', $startyear, $ts
+			'YtD', $startyear, $ts, '%5.1f', '%5s'
 		];
 
 		for($i = 0; $i < 3; ++$i) {
 			$prevmonth = strtotime('-1 month', $startmonth);
 			$periods[] = [
-				date('M', $prevmonth), $prevmonth, $startmonth
+				date('M', $prevmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
 			];
 			$startmonth = $prevmonth;
 		}
@@ -100,20 +103,56 @@ function perf(array &$pf, $date = 'now') {
 		for($i = 0; $i < 2; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
-				date('Y', $prevyear), $prevyear, $startyear
+				date('Y', $prevyear), $prevyear, $startyear, '%5.1f', '%5s'
 			];
 			$startyear = $prevyear;
 		}
 
 		$periods[] = [
-			'All', 0, $ts
+			'All', 0, $ts, '%6.1f', '%6s'
+		];
+		break;
+
+	case 'months':
+		$startmonth = strtotime(date('Y-m-01', $ts));
+		$periods[] = [
+			'MtD', $startmonth, $ts, '%7.2f', '%7s'
 		];
 
-		foreach($periods as $p) {
-			$fmt[$p[0]] = [
-				'%6s', '%s'
+		for($i = 0; $i < 9; ++$i) {
+			$prevmonth = strtotime('-1 month', $startmonth);
+			$periods[] = [
+				date('M', $prevmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
 			];
+			$startmonth = $prevmonth;
 		}
+		break;
+
+	case 'years':
+		$startyear = strtotime(date('Y-01-01', $ts));
+		$periods[] = [
+			'YtD', $startyear, $ts, '%7.2f', '%7s'
+		];
+
+		for($i = 0; $i < 9; ++$i) {
+			$prevyear = strtotime('-1 year', $startyear);
+			$periods[] = [
+				date('Y', $prevyear), $prevyear, $startyear, '%5.1f', '%5s'
+			];
+			$startyear = $prevyear;
+		}
+		break;
+
+	default:
+		fatal("perf(): unknown column type %s\n", $columns);
+		break;
+		
+	}
+
+	foreach($periods as $p) {			
+		$fmt[$p[0]] = [
+			$p[4], $p[4]
+		];
 	}
 
 	print_header($fmt);
@@ -186,7 +225,7 @@ function perf(array &$pf, $date = 'now') {
 				$me += $s['in'] - $e['in'];
 			}
 
-			$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, '%6.2f');
+			$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, $p[3]);
 		}
 
 		print_row($fmt, $row);
@@ -212,7 +251,7 @@ function perf(array &$pf, $date = 'now') {
 
 		if(!$ms) continue;
 		
-		$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, '%6.2f');
+		$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, $p[3]);
 	}
 
 	print_row($fmt, $row);

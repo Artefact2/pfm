@@ -40,7 +40,7 @@ case 'status':
 	break;
 
 case 'perf':
-	perf($pf, $args['at'] ?? 'now');
+	perf($pf, $args['at'] ?? 'now', $args['columns'] ?? 'default');
 	break;
 
 case 'add-line':
@@ -139,7 +139,7 @@ default:
 	fprintf(STDERR, "Usage:\n");
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
-	fprintf(STDERR, "%s perf [at:<date>]\n", $me);
+	fprintf(STDERR, "%s perf [at:<date>] [columns:default|months|years]\n", $me);
 	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);
