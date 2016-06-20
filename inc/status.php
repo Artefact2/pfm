@@ -113,6 +113,40 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		];
 		break;
 
+	case 'days':
+		$start = strtotime(date('Y-m-d', strtotime('-1 day', $ts)));
+		$periods[] = [
+			date('W-N', $ts), $start, $ts, '%7.2f', '%7s'
+		];
+
+		for($i = 0; $i < 9; ++$i) {
+			$prev = strtotime('-1 day', $start);
+			if(in_array(date('N', $start), [ '6', '7' ], true)) {
+				--$i;
+			} else {
+				$periods[] = [
+					date('W-N', $start), $prev, $start, '%5.1f', '%5s'
+				];
+			}
+			$start = $prev;
+		}
+		break;
+
+	case 'weeks':
+		$start = strtotime(date('Y-m-d', strtotime('last Sunday', $ts)));
+		$periods[] = [
+			'WtD', $start, $ts, '%7.2f', '%7s'
+		];
+
+		for($i = 0; $i < 9; ++$i) {
+			$prev = strtotime('-1 week', $start);
+			$periods[] = [
+				date('\WW', $start), $prev, $start, '%5.1f', '%5s'
+			];
+			$start = $prev;
+		}
+		break;
+
 	case 'months':
 		$startmonth = strtotime(date('Y-m-01', $ts));
 		$periods[] = [
