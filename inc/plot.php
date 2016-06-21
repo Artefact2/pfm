@@ -43,19 +43,23 @@ function tsv_perf(array $pf, $stream, $start, $end, $absolute = true, array $ove
 			if(isset($firstv)) $firstv += $deltain;
 		}
 
+		$nextstart = strtotime('+1 day', $start);
+
 		$value = 0;
 		foreach($hold as $ticker => $qty) {
 			$value += get_quote($pf, $ticker, $start) * $qty;
 		}
 
 		if($absolute) {
-			fprintf(
-				$stream,
-				"%s\t%f\t%f\n",
-				date('Y-m-d', $start),
-				$in,
-				$value - $in
-			);
+			foreach([ $start, $nextstart - 1 ] as $ts) {
+				fprintf(
+					$stream,
+					"%d\t%f\t%f\n",
+					$ts,
+					$in,
+					$value - $in
+				);
+			}
 		} else {
 			$ovals = [];
 			
@@ -75,21 +79,23 @@ function tsv_perf(array $pf, $stream, $start, $end, $absolute = true, array $ove
 
 				foreach($overlays as $t) $ovals[$t] = 100.0;
 			}
-			
-			fprintf(
-				$stream,
-				"%s\t%f\t%f",
-				date('Y-m-d', $start),
-				100,
-				$v
-			);
 
-			foreach($overlays as $t) fprintf($stream, "\t%f", $ovals[$t]);
+			foreach([ $start, $nextstart - 1 ] as $ts) {
+				fprintf(
+					$stream,
+					"%d\t%f\t%f",
+					$ts,
+					100,
+					$v
+				);
 
-			fwrite($stream, "\n");
+				foreach($overlays as $t) fprintf($stream, "\t%f", $ovals[$t]);
+
+				fwrite($stream, "\n");
+			}
 		}
 	    
-		$start = strtotime('+1 day', $start);
+		$start = $nextstart;
 	}
 }
 
@@ -100,8 +106,8 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 	
 	$sf = popen('gnuplot -p', 'wb');
 	fwrite($sf, "set xdata time\n");
-	fwrite($sf, "set timefmt '%Y-%m-%d'\n");
-	fprintf($sf, "set xrange ['%s':'%s']\n", date('Y-m-d', maybe_strtotime($start)), date('Y-m-d', maybe_strtotime($end)));
+	fwrite($sf, "set timefmt '%s'\n");
+	fprintf($sf, "set xrange ['%d':'%d']\n", maybe_strtotime($start), maybe_strtotime($end));
 	fwrite($sf, "set style fill solid 0.5 noborder\n");
 	fwrite($sf, "set grid xtics\n");
 	fwrite($sf, "set grid ytics\n");
@@ -136,17 +142,19 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 
 function tsv_pf(array $pf, $out, $start, $end) {
 	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
-		fprintf($out, "%s", date('Y-m-d', $ts));
-		foreach($pf['lines'] as $tkr => $l) {
-			if(!isset($d['agg'][$tkr]) || !$d['agg'][$tkr]['qty']) {
-				$value = 0;
-			} else {
-				$value = $d['agg'][$tkr]['qty'] * get_quote($pf, $tkr, $ts);
-			}
+		foreach([ $ts, strtotime('+1 day', $ts) - 1 ] as $t) {
+			fprintf($out, "%d", $t);
+			foreach($pf['lines'] as $tkr => $l) {
+				if(!isset($d['agg'][$tkr]) || !$d['agg'][$tkr]['qty']) {
+					$value = 0;
+				} else {
+					$value = $d['agg'][$tkr]['qty'] * get_quote($pf, $tkr, $ts);
+				}
 
-			fprintf($out, "\t%f", $value);
+				fprintf($out, "\t%f", $value);
+			}
+			fprintf($out, "\n");
 		}
-		fprintf($out, "\n");
 	}
 }
 
@@ -157,8 +165,8 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	
 	$sf = popen('gnuplot -p', 'wb');
 	fwrite($sf, "set xdata time\n");
-	fwrite($sf, "set timefmt '%Y-%m-%d'\n");
-	fprintf($sf, "set xrange ['%s':'%s']\n", date('Y-m-d', maybe_strtotime($start)), date('Y-m-d', maybe_strtotime($end)));
+	fwrite($sf, "set timefmt '%s'\n");
+	fprintf($sf, "set xrange ['%s':'%s']\n", maybe_strtotime($start), maybe_strtotime($end));
 	fwrite($sf, "set style fill solid 0.5 noborder\n");
 	fwrite($sf, "set grid xtics\n");
 	fwrite($sf, "set grid ytics\n");
@@ -202,6 +210,7 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	}
 
 	/* XXX: colorize properly */
+	/* XXX: prune useless lines */
 	
 	fwrite($sf, "\n");
 	fclose($sf);
