@@ -44,10 +44,10 @@ case 'perf':
 	break;
 
 case 'add-line':
-	foreach([ 'name', 'ticker', 'currency' ] as $k) {
+	foreach([ 'name', 'ticker', 'currency', 'isin' ] as $k) {
 		isset($args[$k]) || fatal("Missing argument for add-line: %s\n", $k);
 	}
-	add_line($pf, $args['name'], $args['ticker'], $args['currency'], $args);
+	add_line($pf, $args['name'], $args['ticker'], $args['currency'], $args['isin']);
 	break;
 
 case 'rm-line':
@@ -145,7 +145,7 @@ default:
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
 	fprintf(STDERR, "%s perf [at:<date>] [columns:default|days|weeks|months|years]\n", $me);
-	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [boursorama:<ticker>] [isin:<ISIN>]\n", $me);
+	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);

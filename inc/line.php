@@ -7,19 +7,15 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-function add_line(array &$pf, $name, $ticker, $currency, array $params = []) {
+function add_line(array &$pf, $name, $ticker, $currency, $isin) {
 	if(isset($pf['lines'][$ticker])) fatal("There is already a line with ticker %s\n", $ticker);
 
 	$pf['lines'][$ticker] = [
 		'name' => $name,
 		'ticker' => $ticker,
 		'currency' => $currency,
+		'isin' => $isin,
 	];
-
-	$optional = [ 'yahoo', 'isin', 'boursorama' ];
-	foreach($optional as $k) {
-		isset($params[$k]) && $pf['lines'][$ticker][$k] = $params[$k];
-	}
 }
 
 function rm_line(array &$pf, $ticker) {
@@ -36,11 +32,9 @@ function rm_line(array &$pf, $ticker) {
 
 function ls_lines(array &$pf) {
 	static $fmt = [
-		'Name' => [ '%32s' ],
+		'Name' => [ '%52s' ],
 		'Tkr' => [ '%5s' ],
 		'Cur' => [ '%4s' ],
-		'Yahoo' => [ '%8s' ],
-		'Brs' => [ '%8s' ],
 		'ISIN' => [ '%13s' ],
 	];
 
@@ -50,11 +44,9 @@ function ls_lines(array &$pf) {
 	
 	foreach($pf['lines'] as $line) {
 		print_row($fmt, [
-			'Name' => shorten_name($line['name'], 32),
+			'Name' => shorten_name($line['name'], 52),
 			'Tkr' => $line['ticker'],
 			'Cur' => $line['currency'],
-			'Yahoo' => $line['yahoo'] ?? '',
-			'Brs' => $line['boursorama'] ?? '',
 			'ISIN' => $line['isin'] ?? '',
 		]);
 	}
@@ -62,7 +54,7 @@ function ls_lines(array &$pf) {
 
 function edit_line(array &$pf, $ticker, array $newvalues) {
 	static $cols = [
-		'name', 'currency', 'yahoo', 'isin', 'boursorama',
+		'name', 'currency', 'isin',
 	];
 
 	if(!isset($pf['lines'][$ticker])) fatal("Ticker %s not found\n", $ticker);

@@ -23,37 +23,25 @@ function get_quote($pf, $ticker, $date = 'now') {
 	}
 	$l = $pf['lines'][$ticker];
 
-	if($date === 'now' || date('Y-m-d', maybe_strtotime($date)) === date('Y-m-d')) {
-		if(isset($l['boursorama'])) {
-			$q = get_boursorama_rt_quote($l['boursorama']);
-			if($q !== null) return $q;
-		}
-		
-		if(isset($l['yahoo'])) {
-			$q = get_yahoo_rt_quote($l['yahoo']);
-			if($q !== null) return $q;
-		}
-	}
-
+	if(!isset($l['isin'])) return null;
+	
 	$date = maybe_strtotime($date);
 
-	if(isset($l['yahoo'])) {
-		$hist = get_yahoo_history($l['yahoo']);
-		if($hist !== []) {
-			$q = find_in_history($hist, $date);
-			if($q !== null) return $q;
-		}
+	if(date('Y-m-d', $date) === date('Y-m-d')) {
+		$q = get_boursorama_rt_quote($l['isin']);
+		if($q !== null) return $q;
+			
+		$q = get_yahoo_rt_quote($l['isin']);
+		if($q !== null) return $q;
 	}
 
-	if(isset($l['isin'])) {
-		$id = get_geco_amf_id($l['isin']);
-		if($id !== null) {
-			$hist = get_geco_amf_history($id, $date);
-			return find_in_history($hist, $date);
-		}
-	}
-	
-	return null;
+	$hist = get_geco_amf_history($l['isin'], $date);
+	$q = find_in_history($hist, $date);
+	if($q !== null) return $q;
+
+	$hist = get_yahoo_history($l['isin']);
+	$q = find_in_history($hist, $date);
+	if($q !== null) return $q;
 }
 
 function get_boursorama_token() {
@@ -67,10 +55,27 @@ function get_boursorama_token() {
 	});
 }
 
-function get_boursorama_rt_quote($brsticker) {
-	return get_cached_thing('brs-rt-'.$brsticker, -900, function() use($brsticker) {
+function get_boursorama_ticker($isin) {
+	return get_cached_thing('brs-id-'.$isin, -31557600, function() use($isin) {
+			$c = curl_init('http://www.boursorama.com/recherche/?q='.$isin);
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+			curl_exec($c);
+			$url = curl_getinfo($c, CURLINFO_EFFECTIVE_URL);
+			if(preg_match('%\?symbole=(.+)$%', $url, $match)) {
+				return $match[1];
+			}
+			return null;
+		});
+}
+
+function get_boursorama_rt_quote($isin) {
+	return get_cached_thing('brs-rt-'.$isin, -900, function() use($isin) {
 			$tok = get_boursorama_token();
 			if($tok === null) return null;
+
+			$ticker = get_boursorama_ticker($isin);
+			if($ticker === null) return null;
 			
 			$c = curl_init('http://www.boursorama.com/flux/streaming.phtml');
 			curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
@@ -78,21 +83,37 @@ function get_boursorama_rt_quote($brsticker) {
 			curl_setopt($c, CURLOPT_POST, true);
 			curl_setopt($c, CURLOPT_POSTFIELDS, $q = http_build_query([
 				'token' => $tok,
-				//'symboles['.$brsticker.'][live]' => 'R',
-				'symboles['.$brsticker.'][book]' => 'D',
+				//'symboles['.$ticker.'][live]' => 'R',
+				'symboles['.$ticker.'][book]' => 'D',
 			]));
 			$r = curl_exec($c);
 			$d = json_decode($r, true);
-			if(!isset($d['result'][$brsticker]['book'][0])) return null;
+			if(!isset($d['result'][$ticker]['book'][0])) return null;
 			return .5 * (
-				floatval($d['result'][$brsticker]['book'][0]['ask']) +
-				floatval($d['result'][$brsticker]['book'][0]['bid'])
+				floatval($d['result'][$ticker]['book'][0]['ask']) +
+				floatval($d['result'][$ticker]['book'][0]['bid'])
 			);
 		});
 }
+	
+function get_yahoo_ticker($isin) {
+	return get_cached_thing('yahoo-id-'.$isin, -31557600, function() use($isin) {
+			$c = curl_init('https://finance.yahoo.com/lookup?s='.$isin);
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+			$r = curl_exec($c);
+			if(preg_match('%<a href="https://finance.yahoo.com/q[^?]*\?s=(?<ticker>[^"]+)"%', $r, $match)) {
+				/* XXX: may not return the *best* one */
+				return $match['ticker'];
+			}
+			return null;
+		});
+}
 
-function get_yahoo_rt_quote($yahooticker) {
-	return get_cached_thing('yahoo-rt-'.$yahooticker, -900, function() use($yahooticker) {
+function get_yahoo_rt_quote($isin) {
+	return get_cached_thing('yahoo-rt-'.$isin, -900, function() use($isin) {
+			$yahooticker = get_yahoo_ticker($isin);
+			if($yahooticker === null) return null;
 			$price = @file_get_contents(sprintf('https://download.finance.yahoo.com/d/quotes.csv?s=%s&f=abl', $yahooticker));
 			if($price === false || !preg_match('%^([0-9]+(\.[0-9]+)?),([0-9]+(\.[0-9]+)?)$%m', $price, $m)) {
 				return null;
@@ -102,13 +123,15 @@ function get_yahoo_rt_quote($yahooticker) {
 		});
 }
 
-function get_yahoo_history($yahooticker) {
+function get_yahoo_history($isin) {
 	static $tomorrow = null;
 	if($tomorrow === null) {
 		$tomorrow = strtotime('+1 day', strtotime(date('Y-m-d 00:00:00')));
 	}
 	
-	return get_cached_thing('yahoo-hist-'.$yahooticker, $tomorrow, function() use($yahooticker) {			
+	return get_cached_thing('yahoo-hist-'.$isin, $tomorrow, function() use($isin) {
+			$yahooticker = get_yahoo_ticker($isin);
+			if($yahooticker === null) return [];
 			$csv = @file_get_contents($url = sprintf('https://ichart.finance.yahoo.com/table.csv?s=%s&c=1900', $yahooticker));
 			if($csv === false) {
 				return [];
@@ -178,17 +201,19 @@ function get_geco_amf_id($isin) {
 		});
 }
 
-function get_geco_amf_history(array $amfid, $ts) {
+function get_geco_amf_history($isin, $ts) {
 	static $tomorrow = null;
 	if($tomorrow === null) {
 		$tomorrow = strtotime('+1 day', strtotime(date('Y-m-d 00:00:00')));
 	}
 	
 	return get_cached_thing(
-		'geco-'.$amfid['NumProd'].'-'.$amfid['NumPart'].'-'.date('Y-W', $ts),
+		'geco-'.$isin.'-'.date('Y-W', $ts),
 		time() - $ts > 604800 ? -31557600 : $tomorrow,
-		function() use($amfid, $ts) {
+		function() use($isin, $ts) {
 			$ts = strtotime(date('Y-m-d', $ts));
+			$amfid = get_geco_amf_id($isin);
+			if($amfid === null) return null;
 			
 			$c = curl_init(sprintf(
 				'http://geco.amf-france.org/bio/info_part.aspx'

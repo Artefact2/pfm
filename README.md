@@ -154,7 +154,7 @@ Silmeria ~ % pfm ls-lines
 ## Add line (`add-line`)
 
 ~~~
-Silmeria ~ % pfm add-line ticker:CW8 yahoo:CW8.PA currency:EUR isin:FR0010756098 'name:AMUNDI ETF MSCI WORLD UCITS ETF'
+Silmeria ~ % pfm add-line ticker:CW8 currency:EUR isin:FR0010756098 'name:AMUNDI ETF MSCI WORLD UCITS ETF'
 ~~~
 
 Parameters:
@@ -162,7 +162,6 @@ Parameters:
 * `name:<name>`: required
 * `ticker:<ticker>`: required, must be unique
 * `currency:<currency-code>`: required, but unused at the moment (TODO)
-* `yahoo:<yahoo>`: optional, Yahoo Finance ticker (used for quotes & price history)
 * `isin:<isin>`: optional, ISIN code of the stock (used for quotes & price history)
 
 ## Remove line (`rm-line`)
