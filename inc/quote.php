@@ -24,6 +24,11 @@ function get_quote($pf, $ticker, $date = 'now') {
 	$l = $pf['lines'][$ticker];
 
 	if($date === 'now' || date('Y-m-d', maybe_strtotime($date)) === date('Y-m-d')) {
+		if(isset($l['boursorama'])) {
+			$q = get_boursorama_rt_quote($l['boursorama']);
+			if($q !== null) return $q;
+		}
+		
 		if(isset($l['yahoo'])) {
 			$q = get_yahoo_rt_quote($l['yahoo']);
 			if($q !== null) return $q;
@@ -51,9 +56,44 @@ function get_quote($pf, $ticker, $date = 'now') {
 	return null;
 }
 
+function get_boursorama_token() {
+	return get_cached_thing('brs-token', -300, function() {
+		$c = curl_init('http://www.boursorama.com/');
+		curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
+		curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+		$r = curl_exec($c);
+		preg_match('%BRS\.App\.Streaming\.Proxy\.Ajax\(\{token: \'(?<token>[^\']+?)\'%', $r, $matches);
+		return $matches['token'] ?? null;
+	});
+}
+
+function get_boursorama_rt_quote($brsticker) {
+	return get_cached_thing('brs-rt-'.$brsticker, -900, function() use($brsticker) {
+			$tok = get_boursorama_token();
+			if($tok === null) return null;
+			
+			$c = curl_init('http://www.boursorama.com/flux/streaming.phtml');
+			curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($c, CURLOPT_POST, true);
+			curl_setopt($c, CURLOPT_POSTFIELDS, $q = http_build_query([
+				'token' => $tok,
+				//'symboles['.$brsticker.'][live]' => 'R',
+				'symboles['.$brsticker.'][book]' => 'D',
+			]));
+			$r = curl_exec($c);
+			$d = json_decode($r, true);
+			if(!isset($d['result'][$brsticker]['book'][0])) return null;
+			return .5 * (
+				floatval($d['result'][$brsticker]['book'][0]['ask']) +
+				floatval($d['result'][$brsticker]['book'][0]['bid'])
+			);
+		});
+}
+
 function get_yahoo_rt_quote($yahooticker) {
 	return get_cached_thing('yahoo-rt-'.$yahooticker, -900, function() use($yahooticker) {
-			$price = @file_get_contents(sprintf('https://download.finance.yahoo.com/d/quotes.csv?s=%s&f=ab', $yahooticker));
+			$price = @file_get_contents(sprintf('https://download.finance.yahoo.com/d/quotes.csv?s=%s&f=abl', $yahooticker));
 			if($price === false || !preg_match('%^([0-9]+(\.[0-9]+)?),([0-9]+(\.[0-9]+)?)$%m', $price, $m)) {
 				return null;
 			}

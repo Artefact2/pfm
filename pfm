@@ -55,6 +55,11 @@ case 'rm-line':
 	rm_line($pf, $args['ticker']);
 	break;
 
+case 'edit-line':
+	isset($args['ticker']) || fatal("Missing argument for edit-line: ticker\n");
+	edit_line($pf, $args['ticker'], $args);
+	break;
+
 case 'ls-lines':
 	ls_lines($pf);
 	break;
@@ -140,8 +145,9 @@ default:
 	fprintf(STDERR, "%s\n", $me);
 	fprintf(STDERR, "%s status [at:<date>]\n", $me);
 	fprintf(STDERR, "%s perf [at:<date>] [columns:default|days|weeks|months|years]\n", $me);
-	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [isin:<ISIN>]\n", $me);
+	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> [yahoo:<ticker>] [boursorama:<ticker>] [isin:<ISIN>]\n", $me);
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
+	fprintf(STDERR, "%s edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);
 	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
 	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);

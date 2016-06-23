@@ -16,7 +16,7 @@ function add_line(array &$pf, $name, $ticker, $currency, array $params = []) {
 		'currency' => $currency,
 	];
 
-	$optional = [ 'yahoo', 'isin' ];
+	$optional = [ 'yahoo', 'isin', 'boursorama' ];
 	foreach($optional as $k) {
 		isset($params[$k]) && $pf['lines'][$ticker][$k] = $params[$k];
 	}
@@ -36,10 +36,11 @@ function rm_line(array &$pf, $ticker) {
 
 function ls_lines(array &$pf) {
 	static $fmt = [
-		'Name' => [ '%42s' ],
+		'Name' => [ '%32s' ],
 		'Tkr' => [ '%5s' ],
 		'Cur' => [ '%4s' ],
 		'Yahoo' => [ '%8s' ],
+		'Brs' => [ '%8s' ],
 		'ISIN' => [ '%13s' ],
 	];
 
@@ -49,12 +50,26 @@ function ls_lines(array &$pf) {
 	
 	foreach($pf['lines'] as $line) {
 		print_row($fmt, [
-			'Name' => shorten_name($line['name'], 42),
+			'Name' => shorten_name($line['name'], 32),
 			'Tkr' => $line['ticker'],
 			'Cur' => $line['currency'],
 			'Yahoo' => $line['yahoo'] ?? '',
+			'Brs' => $line['boursorama'] ?? '',
 			'ISIN' => $line['isin'] ?? '',
 		]);
+	}
+}
+
+function edit_line(array &$pf, $ticker, array $newvalues) {
+	static $cols = [
+		'name', 'currency', 'yahoo', 'isin', 'boursorama',
+	];
+
+	if(!isset($pf['lines'][$ticker])) fatal("Ticker %s not found\n", $ticker);
+
+	foreach($cols as $c) {
+		if(!isset($newvalues[$c])) continue;
+		$pf['lines'][$ticker][$c] = $newvalues[$c];
 	}
 }
 
@@ -85,5 +100,5 @@ function shorten_name($name, $targetlength) {
 		
 	} while($length > $targetlength && $longestk !== null);
 
-	return implode(' ', $parts);
+	return substr(implode(' ', $parts), 0, $targetlength);
 }
