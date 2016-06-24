@@ -44,17 +44,6 @@ function get_quote($pf, $ticker, $date = 'now') {
 	if($q !== null) return $q;
 }
 
-function get_boursorama_token() {
-	return get_cached_thing('brs-token', -300, function() {
-		$c = curl_init('http://www.boursorama.com/');
-		curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
-		curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
-		$r = curl_exec($c);
-		preg_match('%BRS\.App\.Streaming\.Proxy\.Ajax\(\{token: \'(?<token>[^\']+?)\'%', $r, $matches);
-		return $matches['token'] ?? null;
-	});
-}
-
 function get_boursorama_ticker($isin) {
 	return get_cached_thing('brs-id-'.$isin, -31557600, function() use($isin) {
 			$c = curl_init('http://www.boursorama.com/recherche/?q='.$isin);
@@ -71,28 +60,37 @@ function get_boursorama_ticker($isin) {
 
 function get_boursorama_rt_quote($isin) {
 	return get_cached_thing('brs-rt-'.$isin, -900, function() use($isin) {
-			$tok = get_boursorama_token();
-			if($tok === null) return null;
-
 			$ticker = get_boursorama_ticker($isin);
 			if($ticker === null) return null;
 			
-			$c = curl_init('http://www.boursorama.com/flux/streaming.phtml');
+			$c = curl_init(
+				'http://www.boursorama.com/ajax/ui/refresh.phtml/boursorama/block/cours/orderbook?symbol='.$ticker.'&nbLines=6'
+			);
 			curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
 			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($c, CURLOPT_POST, true);
+			curl_setopt($c, CURLOPT_HTTPHEADER, [
+				'X-Requested-With: XMLHttpRequest',
+				'X-Brs-Xhr-Request: true',
+			]);
 			curl_setopt($c, CURLOPT_POSTFIELDS, $q = http_build_query([
-				'token' => $tok,
-				//'symboles['.$ticker.'][live]' => 'R',
-				'symboles['.$ticker.'][book]' => 'D',
+				'id' => $id = mt_rand(),
+				'config[id]' => 'b'.$id,
+				'config[width]' => '400',
+				'config[allowCustom]' => 'false',
+				'class' => 'Boursorama_Block_Cours_Orderbook',
+				'parameters[symbol]' => $ticker,
+				'parameters[nbLines]' => '6',
 			]));
 			$r = curl_exec($c);
 			$d = json_decode($r, true);
-			if(!isset($d['result'][$ticker]['book'][0])) return null;
-			return .5 * (
-				floatval($d['result'][$ticker]['book'][0]['ask']) +
-				floatval($d['result'][$ticker]['book'][0]['bid'])
-			);
+			$x = new \DOMDocument();
+			if(!$x->loadHTML($d['outputs']['body'])) return null;
+			$x = simplexml_import_dom($x);
+
+			$a = (float)$x->body->div[1]->div[0]->table->tbody->tr[0]->td[2];
+			$v = (float)$x->body->div[1]->div[1]->table->tbody->tr[0]->td[0];
+			return .5 * ($a + $v);
 		});
 }
 	
