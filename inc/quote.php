@@ -88,9 +88,20 @@ function get_boursorama_rt_quote($isin) {
 			if(!$x->loadHTML($d['outputs']['body'])) return null;
 			$x = simplexml_import_dom($x);
 
-			$a = (float)$x->body->div[1]->div[0]->table->tbody->tr[0]->td[2];
-			$v = (float)$x->body->div[1]->div[1]->table->tbody->tr[0]->td[0];
-			return .5 * ($a + $v);
+			$q = [ null, null ];
+
+			for($z = 0; $z < 2; ++$z) {
+				for($i = 0; $i < count($x->body->div[1]->div[$z]->table->tbody->tr); ++$i) {
+					$p = (float)$x->body->div[1]->div[$z]->table->tbody->tr[$i]->td[2 * (1 - $z)];
+					
+					if($p) {
+						$q[$z] = $p;
+						break;
+					}
+				}
+			}
+
+			return $q[0] ? ($q[1] ? .5 * ($q[0] + $q[1]) : $q[0]) : $q[1];
 		});
 }
 	
