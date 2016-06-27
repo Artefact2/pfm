@@ -36,12 +36,13 @@ function get_quote($pf, $ticker, $date = 'now') {
 	}
 
 	$hist = get_geco_amf_history($l['isin'], $date);
-	$q = find_in_history($hist, $date);
-	if($q !== null) return $q;
+	$qa = find_in_history($hist, $date, $exact);
+	if($qa !== null && $exact) return $qa;
 
 	$hist = get_yahoo_history($l['isin']);
-	$q = find_in_history($hist, $date);
-	if($q !== null) return $q;
+	$qy = find_in_history($hist, $date, $exact);
+	if($qy === null) return $qa;
+	return $qy;
 }
 
 function get_boursorama_ticker($isin) {
@@ -111,9 +112,12 @@ function get_yahoo_ticker($isin) {
 			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
 			$r = curl_exec($c);
-			if(preg_match('%<a href="https://finance.yahoo.com/q[^?]*\?s=(?<ticker>[^"]+)"%', $r, $match)) {
-				/* XXX: may not return the *best* one */
-				return $match['ticker'];
+			if(preg_match_all('%<a href="https://finance.yahoo.com/q[^?]*\?s=(?<ticker>[^"]+)"%', $r, $matches)) {
+				/* XXX dirty hack */
+				foreach($matches['ticker'] as $tkr) {
+					if(substr($tkr, -3) === '.PA') return $tkr;
+				}
+				return $matches['ticker'][0];
 			}
 			return null;
 		});
@@ -155,13 +159,18 @@ function get_yahoo_history($isin) {
 		});
 }
 
-function find_in_history(array $hist, $ts) {
+function find_in_history(array $hist, $ts, &$exactdate = null) {
+	if(($N = date('N', $ts)) === '6') $ts = strtotime('-1 day', $ts);
+	else if($N === '7') $ts = strtotime('-2 days', $ts);
+	
 	$k = date('Y-m-d', $ts);
 	$i = 0;
+	$exactdate = true;
 
 	for($i = 0; $i < 7; ++$i) {
 		if(isset($hist[$k])) return $hist[$k];
 		$k = date('Y-m-d', $ts = strtotime('-1 day', $ts));
+		$exactdate = false;
 	}
 
 	return null;
