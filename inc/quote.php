@@ -35,14 +35,19 @@ function get_quote($pf, $ticker, $date = 'now') {
 		if($q !== null) return $q;
 	}
 
+	$hist = get_boursorama_history($l['isin']);
+	$qb = find_in_history($hist, $date, $exact);
+	if($qb !== null && $exact) return $qb;
+
 	$hist = get_geco_amf_history($l['isin'], $date);
 	$qa = find_in_history($hist, $date, $exact);
 	if($qa !== null && $exact) return $qa;
 
 	$hist = get_yahoo_history($l['isin']);
 	$qy = find_in_history($hist, $date, $exact);
-	if($qy === null) return $qa;
-	return $qy;
+	if($qy !== null) return $qy;
+	if($qa !== null) return $qa;
+	return $qb;
 }
 
 function get_boursorama_ticker($isin) {
@@ -105,6 +110,35 @@ function get_boursorama_rt_quote($isin) {
 			return $q[0] ? ($q[1] ? .5 * ($q[0] + $q[1]) : $q[0]) : $q[1];
 		});
 }
+
+function get_boursorama_history($isin) {
+	return get_cached_thing('brs-hist-'.$isin, strtotime('tomorrow'), function() use($isin) {
+			$ticker = get_boursorama_ticker($isin);
+			if($ticker === null) return [];
+			
+			$c = curl_init(
+				'http://www.boursorama.com/bourse/cours/graphiques/historique.phtml'
+				.'?mo=0&form=OUI&code='.$isin
+				.'&symbole='.$ticker
+				.'&choix_bourse_graf=country%3A33&tc=candlestick&duree=36&pe=0&is=0&mm1=7&mm2=20&mm3=&comp=0'
+				.'&indiceComp=1rPCAC&codeComp=&i1=no&i2=no&i3=no&grap=1'
+			);
+			curl_setopt($c, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0');
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+			
+			if(!preg_match('%"(?<uri>/graphiques/quotes\.phtml?[^"]+)"%', curl_exec($c), $match)) return [];
+			curl_setopt($c, CURLOPT_URL, 'http://www.boursorama.com'.$match['uri']);
+			$j = json_decode(curl_exec($c), true);
+
+			$hist = [];
+
+			foreach($j['dataSets'][0]['dataProvider'] as $row) {
+				$hist[(DateTime::createFromFormat('d/m/Y H:i', $row['d']))->format('Y-m-d')] = $row['c'];
+			}
+
+			return $hist;
+		});
+}
 	
 function get_yahoo_ticker($isin) {
 	return get_cached_thing('yahoo-id-'.$isin, -31557600, function() use($isin) {
@@ -136,13 +170,8 @@ function get_yahoo_rt_quote($isin) {
 		});
 }
 
-function get_yahoo_history($isin) {
-	static $tomorrow = null;
-	if($tomorrow === null) {
-		$tomorrow = strtotime('+1 day', strtotime(date('Y-m-d 00:00:00')));
-	}
-	
-	return get_cached_thing('yahoo-hist-'.$isin, $tomorrow, function() use($isin) {
+function get_yahoo_history($isin) {	
+	return get_cached_thing('yahoo-hist-'.$isin, strtotime('tomorrow'), function() use($isin) {
 			$yahooticker = get_yahoo_ticker($isin);
 			if($yahooticker === null) return [];
 			$csv = @file_get_contents($url = sprintf('https://ichart.finance.yahoo.com/table.csv?s=%s&c=1900', $yahooticker));
