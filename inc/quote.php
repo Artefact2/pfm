@@ -107,7 +107,8 @@ function get_boursorama_rt_quote($isin) {
 				}
 			}
 
-			return $q[0] ? ($q[1] ? .5 * ($q[0] + $q[1]) : $q[0]) : $q[1];
+			if($q[0] === null || $q[1] === null || $q[1] > $q[0] * 1.03) return null;
+			return .5 * ($q[0] + $q[1]);
 		});
 }
 
@@ -166,7 +167,10 @@ function get_yahoo_rt_quote($isin) {
 				return null;
 			}
 
-			return .5 * (floatval($m[1]) + floatval($m[3]));
+			$a = floatval($m[1]);
+			$b = floatval($m[3]);
+			if($a > 1.03 * $b) return null;
+			return .5 * ($a + $b);
 		});
 }
 
