@@ -52,13 +52,19 @@ function get_quote($pf, $ticker, $date = 'now') {
 
 function get_boursorama_ticker($isin) {
 	return get_cached_thing('brs-id-'.$isin, -31557600, function() use($isin) {
-			$c = curl_init('http://www.boursorama.com/recherche/?q='.$isin);
+			$c = curl_init('http://www.boursorama.com/ajax/recherche/index.php?q='.$isin);
 			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
-			curl_exec($c);
-			$url = curl_getinfo($c, CURLINFO_EFFECTIVE_URL);
-			if(preg_match('%\?symbole=(.+)$%', $url, $match)) {
-				return $match[1];
+			curl_setopt($c, CURLOPT_HTTPHEADER, [
+				'X-Requested-With: XMLHttpRequest',
+			]);
+			$r = curl_exec($c);
+			if(preg_match_all('|%3Fsymbole%3D([^&]+)&|', $r, $matches)) {
+				foreach($matches[1] as $tkr) {
+					/* XXX: correlate currency & ticker */
+					if(substr($tkr, 0, 2) === '1r') return $tkr;
+				}
+
+				return $matches[1][0];
 			}
 			return null;
 		});
