@@ -140,7 +140,9 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 	unlink($dat);
 }
 
-function tsv_pf(array $pf, $out, $start, $end) {
+function tsv_pf(array $pf, $out, $start, $end, &$used = null) {
+	$used = [];
+	
 	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
 		foreach([ $ts, strtotime('+1 day', $ts) - 1 ] as $t) {
 			fprintf($out, "%d", $t);
@@ -148,6 +150,7 @@ function tsv_pf(array $pf, $out, $start, $end) {
 				if(!isset($d['agg'][$tkr]) || !$d['agg'][$tkr]['qty']) {
 					$value = 0;
 				} else {
+					$used[$tkr] = true;
 					$value = $d['agg'][$tkr]['qty'] * get_quote($pf, $tkr, $ts);
 				}
 
@@ -160,7 +163,7 @@ function tsv_pf(array $pf, $out, $start, $end) {
 
 function plot_pf(array $pf, $start, $end, $absolute = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
-	tsv_pf($pf, $datf = fopen($dat, 'wb'), $start, $end);
+	tsv_pf($pf, $datf = fopen($dat, 'wb'), $start, $end, $used);
 	fclose($datf);
 	
 	$sf = popen('gnuplot -p', 'wb');
@@ -186,10 +189,16 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	fwrite($sf, "plot ");
 	$i = 2;
 	$base = '0';
-	$n = count($pf['lines']);
+	$n = count($used);
+	$j = 0;
 	
 	foreach($pf['lines'] as $tkr => $l) {
-		if($i > 2) fwrite($sf, ', ');
+		if(!isset($used[$tkr])) {
+			++$i;
+			continue;
+		}
+		
+		if($j) fwrite($sf, ', ');
 		
 		fprintf(
 			$sf,
@@ -200,7 +209,7 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 			$absolute ? 1 : $tot,
 			$base,
 			$absolute ? 1 : $tot,
-			$color = hsl_to_rgb(($i - 2) / $n, 1.0, 0.4),
+			$color = hsl_to_rgb(($j++) / $n, 1.0, 0.4),
 			$tkr
 		);
 
@@ -208,9 +217,6 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 		
 		++$i;
 	}
-
-	/* XXX: colorize properly */
-	/* XXX: prune useless lines */
 	
 	fwrite($sf, "\n");
 	fclose($sf);
