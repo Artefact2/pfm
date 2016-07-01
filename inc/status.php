@@ -73,7 +73,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 	switch($columns) {
 		
 	case 'default':
-		$startday = strtotime('-1 day', strtotime(date('Y-m-d', $ts)));
+		$startday = strtotime('yesterday', $ts);
 		$periods[] = [
 			'Day', $startday, $ts, '%6.2f', '%6s'
 		];
@@ -82,28 +82,28 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 			'WtD', strtotime('last sunday', $ts), $ts, '%5.1f', '%5s'
 		];
 
-		$startmonth = strtotime(date('Y-m-01', $ts));
+		$startmonth = strtotime('last day of last month', $ts);
 		$periods[] = [
 			'MtD', $startmonth, $ts, '%5.1f', '%5s'
 		];
 
-		$startyear = strtotime(date('Y-01-01', $ts));
+		$startyear = strtotime('last day of last year', $ts);
 		$periods[] = [
 			'YtD', $startyear, $ts, '%5.1f', '%5s'
 		];
 
 		for($i = 0; $i < 3; ++$i) {
-			$prevmonth = strtotime('-1 month', $startmonth);
+			$prevmonth = strtotime('last day of last month', $startmonth);
 			$periods[] = [
-				date('M', $prevmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
+				date('M', $startmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
 			];
 			$startmonth = $prevmonth;
 		}
 
 		for($i = 0; $i < 2; ++$i) {
-			$prevyear = strtotime('-1 year', $startyear);
+			$prevyear = strtotime('last day of last year', $startyear);
 			$periods[] = [
-				date('Y', $prevyear), $prevyear, $startyear, '%5.1f', '%5s'
+				date('Y', $startyear), $prevyear, $startyear, '%5.1f', '%5s'
 			];
 			$startyear = $prevyear;
 		}
@@ -114,13 +114,13 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		break;
 
 	case 'days':
-		$start = strtotime(date('Y-m-d', strtotime('-1 day', $ts)));
+		$start = strtotime('yesterday', $ts);
 		$periods[] = [
 			date('W-N', $ts), $start, $ts, '%7.2f', '%7s'
 		];
 
 		for($i = 0; $i < 9; ++$i) {
-			$prev = strtotime('-1 day', $start);
+			$prev = strtotime('yesterday', $start);
 			if(in_array(date('N', $start), [ '6', '7' ], true)) {
 				--$i;
 			} else {
@@ -139,7 +139,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		];
 
 		for($i = 0; $i < 9; ++$i) {
-			$prev = strtotime('-1 week', $start);
+			$prev = strtotime('last Sunday', $start);
 			$periods[] = [
 				date('\WW', $start), $prev, $start, '%5.1f', '%5s'
 			];
@@ -148,28 +148,28 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		break;
 
 	case 'months':
-		$startmonth = strtotime(date('Y-m-01', $ts));
+		$startmonth = strtotime('last day of last month', $ts);
 		$periods[] = [
 			'MtD', $startmonth, $ts, '%7.2f', '%7s'
 		];
 
 		for($i = 0; $i < 9; ++$i) {
-			$prevmonth = strtotime('-1 month', $startmonth);
+			$prevmonth = strtotime('last day of last month', $startmonth);
 			$periods[] = [
-				date('M', $prevmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
+				date('M', $startmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
 			];
 			$startmonth = $prevmonth;
 		}
 		break;
 
 	case 'years':
-		$startyear = strtotime(date('Y-01-01', $ts));
+		$startyear = strtotime('last day of last year', $ts);
 		$periods[] = [
 			'YtD', $startyear, $ts, '%7.2f', '%7s'
 		];
 
 		for($i = 0; $i < 9; ++$i) {
-			$prevyear = strtotime('-1 year', $startyear);
+			$prevyear = strtotime('last day of last year', $startyear);
 			$periods[] = [
 				date('Y', $prevyear), $prevyear, $startyear, '%5.1f', '%5s'
 			];
