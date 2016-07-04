@@ -104,8 +104,10 @@ function get_boursorama_rt_quote($isin) {
 
 			for($z = 0; $z < 2; ++$z) {
 				for($i = 0; $i < count($x->body->div[1]->div[$z]->table->tbody->tr); ++$i) {
-					$p = (float)$x->body->div[1]->div[$z]->table->tbody->tr[$i]->td[2 * (1 - $z)];
-					
+					$e = $x->body->div[1]->div[$z]->table->tbody->tr[$i]->td[2 * (1 - $z)];
+					if($e->span) $e = $e->span;
+
+					$p = (float)$e;
 					if($p) {
 						$q[$z] = $p;
 						break;
