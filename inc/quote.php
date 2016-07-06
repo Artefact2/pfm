@@ -14,7 +14,7 @@
  * fetched.
  * @returns a price or null if no price could be fetched
  */
-function get_quote($pf, $ticker, $date = 'now') {
+function get_quote($pf, $ticker, $date = 'now', &$from = null) {
 	$cachedir = getenv('XDG_CACHE_HOME');
 	if($cachedir === false) $cachedir = getenv('HOME').'/.cache';
 
@@ -29,24 +29,44 @@ function get_quote($pf, $ticker, $date = 'now') {
 
 	if(date('Y-m-d', $date) === date('Y-m-d')) {
 		$q = get_boursorama_rt_quote($l['isin']);
-		if($q !== null) return $q;
+		if($q !== null) {
+			$from = 'brs-rt';
+			return $q;
+		}
 			
 		$q = get_yahoo_rt_quote($l['isin']);
-		if($q !== null) return $q;
+		if($q !== null) {
+			$from = 'yahoo-rt';
+			return $q;
+		}
 	}
 
 	$hist = get_boursorama_history($l['isin']);
 	$qb = find_in_history($hist, $date, $exact);
-	if($qb !== null && $exact) return $qb;
+	if($qb !== null && $exact) {
+		$from = 'brs-hist exact';
+		return $qb;
+	}
 
 	$hist = get_geco_amf_history($l['isin'], $date);
 	$qa = find_in_history($hist, $date, $exact);
-	if($qa !== null && $exact) return $qa;
+	if($qa !== null && $exact) {
+		$from = 'geco-amf-hist exact';
+		return $qa;
+	}
 
 	$hist = get_yahoo_history($l['isin']);
 	$qy = find_in_history($hist, $date, $exact);
-	if($qy !== null) return $qy;
-	if($qa !== null) return $qa;
+	if($qy !== null) {
+		$from = 'yahoo-hist '.($exact ? 'exact' : '!exact');
+		return $qy;
+	}
+	if($qa !== null) {
+		$from = 'geco-amf-hist !exact';
+		return $qa;
+	}
+
+	$from = 'brs-hist !exact';
 	return $qb;
 }
 
