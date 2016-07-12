@@ -103,7 +103,7 @@ function print_sep(array $fmt) {
 	echo $sep;
 }
 
-function colorize_percentage($pc, $fmt = '%6.2f', $hi = 3, $low = .5, $neghi = null, $neglow = null) {
+function colorize_percentage($pc, $fmt = '%6.2f', $hi = null, $low = null, $neghi = null, $neglow = null, $label = null) {
 	static $colorseqs = null;
 	if($colorseqs === null) {
 		$colorseqs = [
@@ -116,8 +116,11 @@ function colorize_percentage($pc, $fmt = '%6.2f', $hi = 3, $low = .5, $neghi = n
 		];
 	}
 
+	if($hi === null) $hi = 3;
+	if($low === null) $low = .5;
 	if($neghi === null) $neghi = 100. / (1 + $hi / 100.) - 100;
 	if($neglow === null) $neglow = 100. / (1 + $low / 100.) - 100;
+	if($label === null) $label = $pc;
 
 	$out = $colorseqs['bold'];
 	
@@ -126,7 +129,7 @@ function colorize_percentage($pc, $fmt = '%6.2f', $hi = 3, $low = .5, $neghi = n
 	else if($pc < $neghi) $out .= $colorseqs['magenta'];
 	else if($pc < $neglow) $out .= $colorseqs['red'];
 	
-	$out .= sprintf($fmt, $pc);
+	$out .= sprintf($fmt, $label);
 	$out .= $colorseqs['reset'];
 	
 	return $out;

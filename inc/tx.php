@@ -66,28 +66,13 @@ function ls_tx(array &$pf, array $filters = []) {
 	}
 }
 
-function aggregate_tx(array $pf, array $filters = []) {
-	$agg = [];
-
-	$before = isset($filters['before']) ? maybe_strtotime($filters['before']) : null;
-
-	foreach($pf['tx'] as $tx) {
-		if($before !== null && $tx['ts'] > $before) continue;
-		
-		$ticker = $tx['ticker'];
-		
-		if(!isset($agg[$ticker])) {
-			$agg[$ticker] = [
-				'in' => 0.0,
-				'qty' => 0.0,
-			];
-		}
-
-		$agg[$ticker]['in'] += $tx['fee'] + $tx['buy']*$tx['price'];
-		$agg[$ticker]['qty'] += $tx['buy'];
-	}
+function aggregate_tx(array $pf, array $filters = [], array &$totals = null) {
+	$before = $filters['before'] ?? 'now';
 	
-	return $agg;
+	foreach(iterate_tx($pf, $before, $before) as $res) {
+		$totals = $res['totals'];
+		return $res['agg'];
+	}
 }
 
 function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
@@ -97,39 +82,75 @@ function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
 	$txs = $pf['tx'];
 	reset($txs);
 	$tx = current($txs);
-	$in = 0;
 
+	static $blank = [
+		'in' => 0.0,
+		'out' => 0.0,
+		'realized' => 0.0,
+		'qty' => 0.0,
+	];
+	
 	$agg = [];
+	$totals = $blank;
 	
 	while($start <= $end) {
 		$delta = [];
+		$dtotals = $blank;
 		
 		while($tx !== false && $tx['ts'] <= $start) {
 			$tkr = $tx['ticker'];
-			
-			foreach([ &$agg, &$delta ] as &$a) {
-				if(isset($a[$tkr])) continue;
+
+			if(!isset($agg[$tkr])) {
+				$agg[$tkr] = $blank;
+			}
+
+			if(!isset($delta[$tkr])) {
+				$delta[$tkr] = $blank;
+			}
+
+			if($tx['buy'] > 0) {
+				$in = $tx['buy'] * $tx['price'];
 				
-				$a[$tx['ticker']] = [
-					'in' => 0.0,
-					'qty' => 0.0,
-				];
+				$agg[$tkr]['in'] += $in;
+				$delta[$tkr]['in'] += $in;
+				$totals['in'] += $in;
+				$dtotals['in'] += $in;
+			} else if($tx['buy'] < 0) {
+				$out = -$tx['buy'] * $agg[$tkr]['in'] / $agg[$tkr]['qty'];
+				$realized = -$tx['buy'] * $tx['price'] - $out;
+
+				$agg[$tkr]['out'] += $out;
+				$delta[$tkr]['out'] += $out;
+				$totals['out'] += $out;
+				$dtotals['out'] += $out;
+				
+				$agg[$tkr]['realized'] += $realized;
+				$delta[$tkr]['realized'] += $realized;
+				$totals['realized'] += $realized;
+				$dtotals['realized'] += $realized;
 			}
 
 			$agg[$tkr]['qty'] += $tx['buy'];
 			$delta[$tkr]['qty'] += $tx['buy'];
 			
-			$agg[$tkr]['in'] += ($deltain = $tx['fee'] + $tx['buy'] * $tx['price']);
-			$delta[$tkr]['in'] += $deltain;
+			$agg[$tkr]['realized'] -= $tx['fee'];
+			$delta[$tkr]['realized'] -= $tx['fee'];
+			$totals['realized'] -= $tx['fee'];
+			$dtotals['realized'] -= $tx['fee'];
 			
 			$tx = next($txs);
 		}
 
 		yield $start => [
 			'agg' => $agg,
+			'totals' => $totals,
 			'delta' => $delta,
+			'dtotals' => $dtotals,
 		];
+
+		if($start === $end) return;
 		
 		$start = strtotime($interval, $start);
+		if($start > $end) $start = $end;
 	}
 }

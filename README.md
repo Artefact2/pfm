@@ -15,18 +15,19 @@ Released under the WTFPLv2 license.
 
 ~~~
 Silmeria ~ % pfm
-  Tkr |    Price |  Quantity |  Money in |     Value |      Gain |  %Wgt |  Perf
-------+----------+-----------+-----------+-----------+-----------+-------+------
- 500H |          |    0.0000 |    -26.80 |           |     26.80 |       |      
-  CEU |   182.60 |   15.0000 |   2772.65 |   2739.00 |    -33.65 | 17.31 | -1.21
-  CW8 |          |    0.0000 |   -372.51 |           |    372.51 |       |      
- ESEH |   100.81 |   58.0000 |   5849.15 |   5846.69 |     -2.46 | 36.95 | -0.04
-  MTD |   171.63 |    2.9768 |    500.00 |    510.92 |     10.92 |  3.23 |  2.18
- SMAE |   121.69 |   24.0000 |   2926.52 |   2920.56 |     -5.96 | 18.46 | -0.20
-  UST |    15.77 |  115.9520 |   1950.00 |   1827.98 |   -122.02 | 11.55 | -6.26
-  WLD |   148.03 |   13.3658 |   2051.06 |   1978.47 |    -72.59 | 12.50 | -3.54
-------+----------+-----------+-----------+-----------+-----------+-------+------
-  TOT |          |           |  15650.07 |  15823.63 |    173.56 |       |  1.11
+  Tkr |  %Wgt |    Price |    Quantity |    Money In |    Realized |  Unrealized
+------+-------+----------+-------------+-------------+-------------+------------
+ ESEH | 30.76 |   103.71 |     58.0000 |     5843.91 |       -5.24 |      171.10
+ SMAE | 23.86 |   111.12 |     42.0000 |     5055.90 |      117.14 |     -388.86
+  CEU | 13.93 |   181.65 |     15.0000 |     2768.85 |       -3.80 |      -44.17
+  WLD | 10.34 |   151.56 |     13.3374 |     2053.36 |        2.30 |      -32.01
+  UST |  9.73 |    16.25 |    117.1845 |     1960.63 |       10.63 |      -56.97
+ VEUR |  8.73 |    26.68 |     64.0000 |     1654.40 |       -2.90 |       52.80
+  MTD |  2.65 |   174.29 |      2.9768 |      499.75 |       -0.25 |       19.09
+  CW8 |       |          |             |             |      372.51 |            
+ 500H |       |          |             |             |       26.80 |            
+------+-------+----------+-------------+-------------+-------------+------------
+  TOT |       |          |             |    19836.79 |      517.18 |     -279.02
 ~~~
 
 ~~~
@@ -58,24 +59,19 @@ Parameters:
 Columns:
 
 * `Tkr`: the line ticker
-* `Price`: the price of the stock
-* `Quantity`: number of stocks you own
-* `Money in`: total amount of money you spent on this stock, calculated using the **money in equation**:
-
-  ~~~
-  money_in = buy_qty * buy_price + fees - sell_qty * sell_price
-  ~~~
-  
-* `Value`: price * quantity
-* `Gain`: value - money_in
 * `%Wgt`: weight of this line in your portfolio
-* `Perf`: overall performance of this line
+* `Price`: the current price of the stock
+* `Quantity`: number of stocks you own
+* `Money In`: total amount of money you spent on this stock
+* `Realized`: realized gain (actual gain/loss you already got in cash)
+* `Unrealized`: unrealized gain (theoretical gain/loss you would get by selling now)
 
 ## Performance view (`perf`)
 
 Parameters:
 
-* `at:<date>`: see above.
+* `at:<date>`: see above
+* `columns:default|days|weeks|months|years` use custom columns instead of the defaults
 
 Columns:
 

@@ -10,45 +10,67 @@
 function status(array &$pf, $date = 'now') {
 	static $fmt = [
 		'Tkr' => [ '%5s' ],
-		'Price' => [ '%9s', '%9.2f' ],
-		'Quantity' => [ '%10s', '%10.4f' ],
-		'Money in' => [ '%10s', '%10.2f' ],
-		'Value' => [ '%10s', '%10.2f' ],
-		'Gain' => [ '%10s', '%10.2f' ],
 		'%Wgt' => [ '%6s', '%6.2f' ],
-		'Perf' => [ '%6s', '%6.1f' ],
+		'Price' => [ '%9s', '%9.2f' ],
+		'Quantity' => [ '%12s', '%12.4f' ],
+		'Money In' => [ '%12s', '%12.2f' ],
+		'Realized' => [ '%12s', '%12.2f' ],
+		'Unrealized' => [ '%12s', '%12.2f' ],
 	];
 
 	print_header($fmt);
 	print_sep($fmt);
 
+	$totals = [];
 	$agg = aggregate_tx($pf, [
 		'before' => $date,
-	]);
-	$totalv = 0;
-	$totalin = 0;
-	foreach($agg as $t => &$l) {
-		if($l['qty']) {
-			$l['price'] = get_quote($pf, $t, $date);
-		} else $l['price'] = 0.0;
+	], $totals);
+
+	$totals['value'] = 0.0;
+	$totals['unrealized'] = 0.0;
+
+	foreach($agg as $tkr => &$a) {
+		if(!$a['qty']) {
+			$a['value'] = 0;
+			continue;
+		}
 		
-		$totalv += $l['qty']*$l['price'];
-		$totalin += $l['in'];
+		$a['price'] = get_quote($pf, $tkr, $date);
+		$totals['value'] += $a['value'] = $a['price'] * $a['qty'];
+		$totals['unrealized'] += $a['unrealized'] = $a['value'] - $a['in'] + $a['out'];
 	}
+	unset($a);
+
+	uasort($agg, function($a, $b) {
+		if($a['qty'] && $b['qty']) return $b['value'] <=> $a['value'];
+		if($a['qty'] && !$b['qty']) return -1;
+		if(!$a['qty'] && $b['qty']) return 1;
+		return $b['realized'] <=> $a['realized'];
+	});
 	
-	foreach($pf['lines'] as $line) {
-		if(!isset($agg[$line['ticker']])) continue;
-		$a = $agg[$line['ticker']];
+	foreach($agg as $tkr => $a) {
+		if(!$a['qty']) {
+			print_row($fmt, [
+				'Tkr' => $tkr,
+				'Realized' => colorize_percentage(0, '%12.2f', null, null, null, null, $a['realized']),
+			]);
+			continue;
+		}
 		
 		print_row($fmt, [
-			'Tkr' => $line['ticker'],
-			'Price' => $a['qty'] ? (float)$a['price'] : '',
-			'Quantity' => (float)$a['qty'],
-			'Money in' => (float)$a['in'],
-			'Value' => $a['qty'] ? (float)($a['qty']*$a['price']) : '',
-			'Gain' => (float)($a['qty']*$a['price'] - $a['in']),
-			'%Wgt' => $a['qty'] ? 100.0 * $a['qty']*$a['price'] / $totalv : '',
-			'Perf' => $a['qty'] ? 100.0 * ($a['price'] - $a['in']/$a['qty']) / ($a['in']/$a['qty']) : '',
+			'Tkr' => $tkr,
+			'%Wgt' => 100.0 * $a['value'] / $totals['value'],
+			'Price' => $a['price'],
+			'Quantity' => $a['qty'],
+			'Money In' => $a['in'] - $a['out'],
+			'Realized' => colorize_percentage(
+				100.0 * $a['realized'] / $a['value'], '%12.2f',
+				null, null, null, null, $a['realized']
+			),
+			'Unrealized' => colorize_percentage(
+				100.0 * $a['unrealized'] / $a['value'], '%12.2f',
+				null, null, null, null, $a['unrealized']
+			),
 		]);
 	}
 
@@ -56,10 +78,15 @@ function status(array &$pf, $date = 'now') {
 
 	print_row($fmt, [
 		'Tkr' => 'TOT',
-		'Money in' => $totalin,
-		'Value' => $totalv,
-		'Gain' => $totalv - $totalin,
-		'Perf' => $totalin !== 0 ? 100.0 * ($totalv - $totalin) / $totalin : 0,
+		'Money In' => $totals['in'] - $totals['out'],
+		'Realized' => colorize_percentage(
+			100.0 * $totals['realized'] / $totals['in'], '%12.2f',
+			null, null, null, null, $totals['realized']
+		),
+		'Unrealized' => colorize_percentage(
+			100.0 * $totals['unrealized'] / $totals['in'], '%12.2f',
+			null, null, null, null, $totals['unrealized']
+		),
 	]);
 }
 
@@ -192,101 +219,69 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 	print_header($fmt);
 	print_sep($fmt);
 
-	$aggs = [];
+	$ftable = [];
+	$ftotal = [ 'Ticker' => 'TOT' ];
+
+	foreach($periods as $i => $p) {
+		list($k, $start, $end) = $p;
+
+		$agg = [];
+		/* XXX, for obvious reasons */
+		foreach(iterate_tx($pf, $start, $end, '+1000 years') as $a) {
+			$agg[] = $a;
+		}
+		assert(count($agg) === 2);
+		list($astart, $aend) = $agg;
+
+		$ts = 0.0;
+		$te = 0.0;
+
+		foreach($aend['agg'] as $tkr => $enda) {
+			$starta = $astart['agg'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
+			$delta = $aend['delta'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
+
+			$endval = $enda['qty'] ? get_quote($pf, $tkr, $end) * $enda['qty'] : 0.0;
+			$startval = $starta['qty'] ? get_quote($pf, $tkr, $start) * $starta['qty'] : 0.0;
+
+			$endval += $enda['realized'];
+			$startval += $starta['realized'];
+
+			if($delta['in'] > 0) {
+				/* Bought some inbetween */
+				$startval += $delta['in'];
+			}
+			if($delta['out'] > 0) {
+				/* Sold some inbetween */
+				$endval += $delta['out'];
+			}
+
+			$ts += $startval;
+			$te += $endval;
+
+			/* XXX: probably a bad idea to === floats */
+			if($startval === 0.0 || $endval === $startval) continue;
+			
+			$ftable[$tkr][$k] = colorize_percentage(
+				100.0 * ($endval - $startval) / $startval,
+				$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
+			);
+		}
+
+		/* XXX: same here */
+		if($ts === 0.0 || $te === $ts) continue;
+		$ftotal[$k] = colorize_percentage(
+			100.0 * ($te - $ts) / $ts,
+			$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
+		);
+	}
+
+	ksort($ftable);
 	
-	foreach($periods as $p) {
-		for($i = 1; $i <= 2; ++$i) {
-			if(!isset($aggs[$p[$i]])) {
-				$aggs[$p[$i]] = aggregate_tx($pf, [ 'before' => $p[$i] ]);
-			}
-		}
-	}
-
-	foreach($aggs as $k => &$a) {
-		foreach($a as $ticker => &$l) {
-			$l['price'] = get_quote($pf, $ticker, $k);
-		}
-	}
-	unset($a, $l);
-
-	$totals = [];
-	foreach($aggs as $t => $a) {
-		$totals[$t] = [
-			'in' => 0.0,
-			'value' => 0.0,
-		];
-		
-		foreach($a as $l) {
-			$totals[$t]['in'] += $l['in'];
-			$totals[$t]['value'] += $l['qty']*$l['price'];
-		}
-	}
-
-	foreach($pf['lines'] as $l) {
-		$t = $l['ticker'];
-		$show = false;
-		foreach($aggs as $a) {
-			if(isset($a[$t]) && $a[$t]['qty'] > 0) {
-				$show = true;
-				break;
-			}
-		}
-		if($show === false) continue;
-
-		$row = [ 'Ticker' => $t ];
-
-		foreach($periods as $p) {
-			list($k, $start, $end) = $p;
-			if(!isset($aggs[$end][$t])) continue;
-			if(!isset($aggs[$start][$t])) {
-				$aggs[$start][$t] = [
-					'qty' => 0.0,
-					'in' => 0.0,
-					'price' => 0.0,
-				];
-			}
-			if(!$aggs[$start][$t]['qty'] && !$aggs[$end][$t]['qty']) continue;
-
-			$s = $aggs[$start][$t];
-			$e = $aggs[$end][$t];
-
-			$me = $e['qty'] * $e['price'];
-			$ms = $s['qty'] * $s['price'];
-
-			if($e['in'] > $s['in']) {
-				$ms += $e['in'] - $s['in'];
-			} else if($s['in'] > $e['in']) {
-				$me += $s['in'] - $e['in'];
-			}
-
-			$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, $p[3]);
-		}
-
+	foreach($ftable as $ticker => $row) {
+		$row['Ticker'] = $ticker;
 		print_row($fmt, $row);
 	}
 
 	print_sep($fmt);
-
-	$row = [ 'Ticker' => 'TOTAL' ];
-	
-	foreach($periods as $p) {
-		list($k, $start, $end) = $p;
-
-		$me = $totals[$end]['value'];
-		$ie = $totals[$end]['in'];
-		$ms = $totals[$start]['value'];
-		$is = $totals[$start]['in'];
-
-		if($ie > $is) {
-			$ms += $ie - $is;
-		} else if($is > $ie) {
-			$me += $is - $ie;
-		}
-
-		if(!$ms) continue;
-		
-		$row[$k] = colorize_percentage(100.0 * ($me - $ms) / $ms, $p[3]);
-	}
-
-	print_row($fmt, $row);
+	print_row($fmt, $ftotal);
 }
