@@ -236,6 +236,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 		$ts = 0.0;
 		$te = 0.0;
+		$tg = 0.0;
 
 		foreach($aend['agg'] as $tkr => $enda) {
 			$starta = $astart['agg'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
@@ -249,20 +250,18 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 				$sortdata[$tkr][1] = $enda['realized'];
 			}
 
-			$endval += $enda['realized'];
-			$startval += $starta['realized'];
-
 			$startval += $delta['in'];
 			$endval += $delta['out'];
 
 			$ts += $startval;
 			$te += $endval;
+			$tg += $delta['realized'];
 
 			/* XXX: probably a bad idea to === floats */
 			if($startval === 0.0 || $endval === $startval) continue;
 			
 			$ftable[$tkr][$k] = colorize_percentage(
-				100.0 * ($endval - $startval) / $startval,
+				100.0 * ($endval - $startval + $delta['realized']) / $startval,
 				$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
 			);
 		}
@@ -270,7 +269,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		/* XXX: same here */
 		if($ts === 0.0 || $te === $ts) continue;
 		$ftotal[$k] = colorize_percentage(
-			100.0 * ($te - $ts) / $ts,
+			100.0 * ($te - $ts + $tg) / $ts,
 			$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
 		);
 	}
