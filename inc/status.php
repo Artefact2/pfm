@@ -221,6 +221,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 	$ftable = [];
 	$ftotal = [ 'Ticker' => 'TOT' ];
+	$sortdata = [];
 
 	foreach($periods as $i => $p) {
 		list($k, $start, $end) = $p;
@@ -242,18 +243,17 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 			$endval = $enda['qty'] ? get_quote($pf, $tkr, $end) * $enda['qty'] : 0.0;
 			$startval = $starta['qty'] ? get_quote($pf, $tkr, $start) * $starta['qty'] : 0.0;
+			
+			if($i === 0) {
+				$sortdata[$tkr][0] = $endval;
+				$sortdata[$tkr][1] = $enda['realized'];
+			}
 
 			$endval += $enda['realized'];
 			$startval += $starta['realized'];
 
-			if($delta['in'] > 0) {
-				/* Bought some inbetween */
-				$startval += $delta['in'];
-			}
-			if($delta['out'] > 0) {
-				/* Sold some inbetween */
-				$endval += $delta['out'];
-			}
+			$startval += $delta['in'];
+			$endval += $delta['out'];
 
 			$ts += $startval;
 			$te += $endval;
@@ -275,7 +275,17 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		);
 	}
 
-	ksort($ftable);
+	uksort($ftable, function($ka, $kb) use(&$sortdata) {
+			if(!isset($sortdata[$ka])) $sortdata[$ka] = [ 0.0, 0.0 ];
+			if(!isset($sortdata[$kb])) $sortdata[$kb] = [ 0.0, 0.0 ];
+			$a = $sortdata[$ka];
+			$b = $sortdata[$kb];
+
+			if($a[0] && $b[0]) return $b[0] <=> $a[0];
+			if($a[0] && !$b[0]) return -1;
+			if(!$a[0] && $b[0]) return 1;
+			return $b[1] <=> $a[1];
+		});
 	
 	foreach($ftable as $ticker => $row) {
 		$row['Ticker'] = $ticker;
