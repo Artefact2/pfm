@@ -115,12 +115,11 @@ case 'plot-perf':
 	$start = $args['start'] ?? '-1 year';
 	$end = $args['end'] ?? 'now';
 	$abs = $args['absolute'] ?? false;
-	$overlays = (isset($args['overlays']) && $args['overlays'] !== '') ? explode(',', $args['overlays']) : [];
 	
 	if($args['raw'] ?? false) {
-		tsv_perf($pf, STDOUT, $start, $end, $abs, $overlays);
+		tsv_perf($pf, STDOUT, $start, $end, $abs);
 	} else {
-		plot_perf($pf, $start, $end, $abs, $overlays);
+		plot_perf($pf, $start, $end, $abs);
 	}
 	break;
 
@@ -153,7 +152,7 @@ default:
 	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
 	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
 	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);
-	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [overlays:<ticker>[,<ticker>[,…]]] [raw:0|1]\n", $me);
+	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
 	fprintf(STDERR, "%s plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
 	die(2);
 	

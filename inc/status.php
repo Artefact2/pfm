@@ -102,7 +102,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 	case 'default':
 		$startday = strtotime('yesterday', $ts);
 		$periods[] = [
-			'Day', $startday, $ts, '%6.2f', '%6s'
+			'Day', $startday, $ts, '%7.2f', '%7s'
 		];
 		
 		$periods[] = [
@@ -127,17 +127,13 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 			$startmonth = $prevmonth;
 		}
 
-		for($i = 0; $i < 2; ++$i) {
+		for($i = 0; $i < 3; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
 				date('Y', $startyear), $prevyear, $startyear, '%5.1f', '%5s'
 			];
 			$startyear = $prevyear;
 		}
-
-		$periods[] = [
-			'All', 0, $ts, '%6.1f', '%6s'
-		];
 		break;
 
 	case 'days':
@@ -262,7 +258,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 			
 			$ftable[$tkr][$k] = colorize_percentage(
 				100.0 * ($endval - $startval + $delta['realized']) / $startval,
-				$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
+				$i === 0 ? '%7.2f' : '%5.1f'
 			);
 		}
 
@@ -270,7 +266,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		if($ts === 0.0 || $te === $ts) continue;
 		$ftotal[$k] = colorize_percentage(
 			100.0 * ($te - $ts + $tg) / $ts,
-			$k === 'Day' ? '%6.2f' : ($k === 'All' ? '%6.1f' : ($i === 0 ? '%7.2f' : '%5.1f'))
+			$i === 0 ? '%7.2f' : '%5.1f'
 		);
 	}
 

@@ -11,7 +11,9 @@ Released under the WTFPLv2 license.
 
 # Screenshots
 
-![](./img/perf-relative.png) ![](./img/perf-absolute.png)
+![](./img/pf-relative.png) ![](./img/perf-absolute.png)
+
+![](./img/pf-absolute.png) ![](./img/perf-relative.png)
 
 ~~~
 Silmeria ~ % pfm
@@ -85,7 +87,7 @@ Columns:
 ## Performance graph (`plot-perf`)
 
 ~~~
-Silmeria ~ % pfm plot-perf start:2016-01-01 overlays:CW8U
+Silmeria ~ % pfm plot-perf start:2016-01-01
 ~~~
 
 Parameters:
@@ -93,8 +95,11 @@ Parameters:
 * `start:<date>`
 * `end:<date>`
 * `absolute:0|1`: default is relative (0), absolute will show buy/sell operations and overall portfolio value
-* `overlays:<tickers>`: comma-separated list of tickers to display, only works in relative mode
 * `raw:0|1`: if `1`, don't invoke `gnuplot` and print the raw data, useful if you want to use another tool to generate a chart
+
+## Portfolio graph (`plot-pf`)
+
+Same parameters as `plot-perf`.
 
 ## Transactions view (`ls-tx`)
 

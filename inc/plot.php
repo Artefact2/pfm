@@ -7,109 +7,45 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-function tsv_perf(array $pf, $stream, $start, $end, $absolute = true, array $overlays = []) {	
+function tsv_perf(array $pf, $stream, $start, $end, $absolute = true) {	
 	$start = strtotime(date('Y-m-d', maybe_strtotime($start)));
 	$end = strtotime(date('Y-m-d', maybe_strtotime($end)));
 
-	foreach($overlays as $ol) {
-		if(!isset($pf['lines'][$ol])) {
-			fatal("Overlay must be a valid ticker: %s\n", $ol);
-		}
-	}
-
-	if($absolute && $overlays !== []) {
-		fatal("Overlays not available in absolute mode\n");
-	}
-	
-	$txs = $pf['tx'];
-	reset($txs);
-	$tx = current($txs);
-	$in = 0;
-
-	$hold = [];
-	$obases = [];
-
-	/* XXX: refactor with iterate_tx */
-	while($start <= $end) {
-		while($tx !== false && $tx['ts'] <= $start) {
-			if(!isset($hold[$tx['ticker']])) {
-				$hold[$tx['ticker']] = 0;
-			}
-
-			$hold[$tx['ticker']] += $tx['buy'];
-			$in += ($deltain = $tx['fee'] + $tx['buy']*$tx['price']);
-			$tx = next($txs);
-
-			if(isset($firstv)) $firstv += $deltain;
-		}
-
-		$nextstart = strtotime('+1 day', $start);
-
-		$value = 0;
-		foreach($hold as $ticker => $qty) {
-			$value += get_quote($pf, $ticker, $start) * $qty;
-		}
-
-		if($absolute) {
-			foreach([ $start, $nextstart - 1 ] as $ts) {
-				fprintf(
-					$stream,
-					"%d\t%f\t%f\n",
-					$ts,
-					$in,
-					$value - $in
-				);
-			}
-		} else {
-			$ovals = [];
+	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
+			$in = $d['totals']['in'] - $d['totals']['out'];
+			$real = $d['totals']['realized'];
+			if(!$in) $continue;
 			
-			if(!isset($firstv)) {
-				$firstv = $value > 0 ? $value : $in;
-				$v = 0.0;
+			$value = 0.0;
+			foreach($d['agg'] as $tkr => $a) {
+				if(!$a['qty']) continue;
+				$value += $a['qty'] * get_quote($pf, $tkr, $ts);
+			}
 
-				foreach($overlays as $t) {
-					$obases[$t] = get_quote($pf, $t, $start);
-					$ovals[$t] = 100.0;
-				}
-			} else if($firstv > 0) {
-				$v = 100.0 * ($value - $firstv) / $firstv;
-				foreach($overlays as $t) $ovals[$t] = 100.0 * get_quote($pf, $t, $start) / $obases[$t];
+			if($absolute) {
+				$line = sprintf("%f\t%f\t%f", $in, $value - $in, $real);
 			} else {
-				$v = 0.0;
-
-				foreach($overlays as $t) $ovals[$t] = 100.0;
+				$line = sprintf("%f\t%f\t%f", 100.0, 100.0 * ($value - $in) / $in, 100.0 * $real / $in);
 			}
-
-			foreach([ $start, $nextstart - 1 ] as $ts) {
-				fprintf(
-					$stream,
-					"%d\t%f\t%f",
-					$ts,
-					100,
-					$v
-				);
-
-				foreach($overlays as $t) fprintf($stream, "\t%f", $ovals[$t]);
-
-				fwrite($stream, "\n");
-			}
-		}
-	    
-		$start = $nextstart;
+			
+			fprintf($stream, "%d\t%s\n", $ts, $line);
+			fprintf($stream, "%d\t%s\n", strtotime('+1 day', $ts) - 1, $line);
 	}
 }
 
-function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = []) {
+function plot_perf(array $pf, $start, $end, $absolute = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
-	tsv_perf($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute, $overlays);
+	tsv_perf($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute);
 	fclose($datf);
 	
 	$sf = popen('gnuplot -p', 'wb');
 	fwrite($sf, "set xdata time\n");
 	fwrite($sf, "set timefmt '%s'\n");
 	fprintf($sf, "set xrange ['%d':'%d']\n", maybe_strtotime($start), maybe_strtotime($end));
-	fwrite($sf, "set style fill solid 0.5 noborder\n");
+	fwrite($sf, "set yrange [0<*:]\n");
+	fwrite($sf, "set style fill solid .5 noborder\n");
 	fwrite($sf, "set grid xtics\n");
+	fwrite($sf, "set grid mxtics\n");
 	fwrite($sf, "set grid ytics\n");
 	fwrite($sf, "set grid mytics\n");
 	fwrite($sf, "set mytics 2\n");
@@ -118,22 +54,12 @@ function plot_perf(array $pf, $start, $end, $absolute = true, array $overlays = 
 	fwrite($sf, "set key outside\n");
 	fprintf(
 		$sf,
-		"plot '%s' using 1:(\$2+\$3):2 with filledcurves above linecolor '#008000' title 'Gains', '%s' using 1:(\$2+\$3):2 with filledcurves below linecolor '#800000' title 'Losses'",
+		"plot '%s' using 1:2 with filledcurves above y1=0 linecolor '#E0F0E0' title 'Money In', '%s' using 1:(\$2+\$3):2 with filledcurves above linecolor '#008000' title 'Unrealized Gains', '%s' using 1:(\$2+\$3):2 with filledcurves below linecolor '#800000' title 'Unrealized Losses', '%s' using 1:4 with lines linecolor '#008000' title 'Realized Gains'",
+		$dat,
+		$dat,
 		$dat,
 		$dat
 	);
-
-	$i = 4;
-	foreach($overlays as $o) {
-		fprintf(
-			$sf,
-			", '%s' using 1:$i with lines linecolor '#000000' title '%s'",
-			$dat,
-			$o
-		);
-		++$i;
-		/* TODO: colorize overlay lines */
-	}
 
 	fwrite($sf, "\n");
 	fclose($sf);
