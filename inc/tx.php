@@ -116,7 +116,7 @@ function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
 				$totals['in'] += $in;
 				$dtotals['in'] += $in;
 			} else if($tx['buy'] < 0) {
-				$out = -$tx['buy'] * $agg[$tkr]['in'] / $agg[$tkr]['qty'];
+				$out = -$tx['buy'] * (($agg[$tkr]['in'] - $agg[$tkr]['out']) / $agg[$tkr]['qty']);
 				$realized = -$tx['buy'] * $tx['price'] - $out;
 
 				$agg[$tkr]['out'] += $out;
