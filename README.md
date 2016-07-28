@@ -119,7 +119,7 @@ Parameters:
 
 * `ticker:<ticker>`: required
 * `date:<date>`: optional, use `now` as default (`strtotime()`-formatted)
-* `buy:<qty>` or `sell:<qty>`: optional
+* `buy:<qty>` or `sell:<qty>`: optional, can use `sell:all` to sell all remaining shares
 * `price:<unit-price>`: optional
 * `fee:<fee>`: optional
 * `total:<total>`: optional

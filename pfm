@@ -68,6 +68,11 @@ case 'add-tx':
 	isset($args['ticker']) || fatal("Missing argument for add-tx: ticker\n");
 	if(isset($args['buy']) && isset($args['sell'])) fatal("Too many arguments for add-tx: buy and sell\n");
 	$nargs = 0;
+
+	if(isset($args['sell']) && $args['sell'] === 'all') {
+		$args['sell'] = aggregate_tx($pf, [])[$args['ticker']]['qty'];
+	}
+	
 	if(isset($args['buy']) || isset($args['sell'])) {
 		++$nargs;
 		$qty = floatval($args['buy'] ?? -$args['sell']);
@@ -148,7 +153,7 @@ default:
 	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
 	fprintf(STDERR, "%s edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n", $me);
 	fprintf(STDERR, "%s ls-lines\n", $me);
-	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
+	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>|all] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
 	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
 	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
 	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);

@@ -29,7 +29,7 @@ function status(array &$pf, $date = 'now') {
 	$totals['value'] = 0.0;
 	$totals['unrealized'] = 0.0;
 
-	foreach($agg as $tkr => &$a) {
+	foreach($agg as $tkr => &$a) {		
 		if(!$a['qty']) {
 			$a['value'] = 0;
 			continue;
@@ -234,7 +234,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		$te = 0.0;
 		$tg = 0.0;
 
-		foreach($aend['agg'] as $tkr => $enda) {
+		foreach($aend['agg'] as $tkr => $enda) {			
 			$starta = $astart['agg'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
 			$delta = $aend['delta'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
 

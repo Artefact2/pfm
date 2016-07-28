@@ -137,6 +137,8 @@ function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
 			$delta[$tkr]['realized'] -= $tx['fee'];
 			$totals['realized'] -= $tx['fee'];
 			$dtotals['realized'] -= $tx['fee'];
+
+			if(abs($agg[$tkr]['qty']) < 1e-6) $agg[$tkr]['qty'] = 0;
 			
 			$tx = next($txs);
 		}
