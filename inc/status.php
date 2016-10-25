@@ -51,14 +51,14 @@ function status(array &$pf, $date = 'now') {
 	foreach($agg as $tkr => $a) {
 		if(!$a['qty']) {
 			print_row($fmt, [
-				'Tkr' => $tkr,
+				'Tkr' => (string)$tkr,
 				'Realized' => colorize_percentage(0, '%12.2f', null, null, null, null, $a['realized']),
 			]);
 			continue;
 		}
 		
 		print_row($fmt, [
-			'Tkr' => $tkr,
+			'Tkr' => (string)$tkr,
 			'%Wgt' => 100.0 * $a['value'] / $totals['value'],
 			'Price' => $a['price'],
 			'Quantity' => $a['qty'],
@@ -283,7 +283,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		});
 	
 	foreach($ftable as $ticker => $row) {
-		$row['Ticker'] = $ticker;
+		$row['Ticker'] = (string)$ticker;
 		print_row($fmt, $row);
 	}
 
