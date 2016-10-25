@@ -292,7 +292,7 @@ function get_geco_amf_history($isin, $ts) {
 		function() use($isin, $ts) {
 			$ts = strtotime(date('Y-m-d', $ts));
 			$amfid = get_geco_amf_id($isin);
-			if($amfid === null) return null;
+			if($amfid === null) return [];
 			
 			$c = curl_init(sprintf(
 				'http://geco.amf-france.org/bio/info_part.aspx'
