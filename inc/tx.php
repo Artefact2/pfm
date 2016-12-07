@@ -69,13 +69,14 @@ function ls_tx(array &$pf, array $filters = []) {
 function aggregate_tx(array $pf, array $filters = [], array &$totals = null) {
 	$before = $filters['before'] ?? 'now';
 	
-	foreach(iterate_tx($pf, $before, $before) as $res) {
+	foreach(iterate_time($pf, $before, $before) as $res) {
 		$totals = $res['totals'];
 		return $res['agg'];
 	}
 }
 
-function iterate_tx(array $pf, $start, $end, $interval = '+1 day') {
+/* XXX: use iterate_tx */
+function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 	$start = maybe_strtotime($start);
 	$end = maybe_strtotime($end);
 

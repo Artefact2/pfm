@@ -13,6 +13,7 @@ require __DIR__.'/tx.php';
 require __DIR__.'/status.php';
 require __DIR__.'/quote.php';
 require __DIR__.'/plot.php';
+require __DIR__.'/irr.php';
 
 function fatal(...$params) {
 	fprintf(STDERR, ...$params);

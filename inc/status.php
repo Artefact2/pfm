@@ -224,7 +224,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 		$agg = [];
 		/* XXX, for obvious reasons */
-		foreach(iterate_tx($pf, $start, $end, '+1000 years') as $a) {
+		foreach(iterate_time($pf, $start, $end, '+1000 years') as $a) {
 			$agg[] = $a;
 		}
 		assert(count($agg) === 2);

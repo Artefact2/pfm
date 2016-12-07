@@ -11,7 +11,7 @@ function tsv_perf(array $pf, $stream, $start, $end, $absolute = true) {
 	$start = strtotime(date('Y-m-d', maybe_strtotime($start)));
 	$end = strtotime(date('Y-m-d', maybe_strtotime($end)));
 
-	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
+	foreach(iterate_time($pf, $start, $end) as $ts => $d) {
 			$in = $d['totals']['in'] - $d['totals']['out'];
 			$real = $d['totals']['realized'];
 			if(!$in) $continue;
@@ -69,7 +69,7 @@ function plot_perf(array $pf, $start, $end, $absolute = true) {
 function tsv_pf(array $pf, $out, $start, $end, &$used = null) {
 	$used = [];
 	
-	foreach(iterate_tx($pf, $start, $end) as $ts => $d) {
+	foreach(iterate_time($pf, $start, $end) as $ts => $d) {
 		foreach([ $ts, strtotime('+1 day', $ts) - 1 ] as $t) {
 			fprintf($out, "%d", $t);
 			foreach($pf['lines'] as $tkr => $l) {

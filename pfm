@@ -144,6 +144,22 @@ case 'get-quote':
 	printf("%f\n(from: %s)\n", (float)get_quote($pf, $args['ticker'], $args['at'] ?? 'now', $from), $from);
 	break;
 
+case 'irr':
+	$start = maybe_strtotime($args['start'] ?? '-1 year');
+	$end = maybe_strtotime($args['end'] ?? 'now');
+	$irr = irr($pf, $start, $end);
+	printf(
+		"%30s: %s\n",
+		"Internal Rate of Return (%)",
+		colorize_percentage(100.0 * ($irr - 1))
+	);
+	printf(
+		"%30s: %s\n",
+		"Annualized IRR (%)",
+		colorize_percentage(100.0 * (pow($irr, 86400 * 365.25 / ($end - $start)) - 1))
+	);
+	break;
+
 default:
 	fprintf(STDERR, "Usage:\n");
 	fprintf(STDERR, "%s\n", $me);
@@ -159,6 +175,7 @@ default:
 	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);
 	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
 	fprintf(STDERR, "%s plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
+	fprintf(STDERR, "%s irr [start:<date>] [end:<date>]\n", $me);
 	die(2);
 	
 }

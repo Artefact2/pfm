@@ -101,6 +101,17 @@ Parameters:
 
 Same parameters as `plot-perf`.
 
+## Internal Rate of Return (`irr`)
+
+Parameters:
+
+* `start:<date>`
+* `end:<date>`
+
+Computes the [internal rate of
+return](https://en.wikipedia.org/wiki/Internal_rate_of_return) over
+the selected time frame. Shows the raw rate and the annualized rate.
+
 ## Transactions view (`ls-tx`)
 
 Parameters:
