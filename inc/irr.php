@@ -11,7 +11,7 @@ function irr(array $pf, $start, $end) {
 	$start = maybe_strtotime($start);
 	$end = maybe_strtotime($end);
 
-	$flows = [];
+	$flows = [ '__total__' => [] ];
 	
 	foreach(iterate_time($pf, $start, $end) as $ts => $data) {
 		$t = ($ts - $start) / ($end - $start);
@@ -20,53 +20,96 @@ function irr(array $pf, $start, $end) {
 			$tval = 0.0;
 
 			foreach($data['agg'] as $ticker => $tdata) {
-				if($tdata['qty']) {
-					$tval += $tdata['qty'] * get_quote($pf, $ticker, $ts);
-				}
+				if(!$tdata['qty']) continue;
+				
+				$tval += $val = $tdata['qty'] * get_quote($pf, $ticker, $ts);
+				$flows[$ticker][] = [
+					$t,
+					$ts === $start ? $val : -$val,
+				];
 			}
 
-			$flows[] = [
+			$flows['__total__'][] = [
 				$t,
-				$ts === $start ? $tval : - $tval,
+				$ts === $start ? $tval : -$tval,
 			];
 			
 			continue;
 		}
 
-		$dnav = $data['dtotals']['in']
-			- $data['dtotals']['out']
-			+ $data['dtotals']['realized'];
+		$tdnav = 0;
 
-		if($dnav) {
-			$flows[] = [ $t, $dnav ];
+		foreach($data['delta'] as $tkr => $delta) {			
+			$tdnav += $dnav = $delta['in'] - $delta['out'] - $delta['realized'];
+
+			if($dnav) {
+				if(!isset($flows[$tkr])) {
+					$flows[$tkr] = [];
+				}
+				
+				$flows[$tkr][] = [ $t, $dnav ];
+			}
+		}
+
+		if($tdnav) {
+			$flows['__total__'][] = [ $t, $tdnav ];
 		}
 	}
 
-	$npv = function($r) use($flows) {
+	foreach($flows as &$f) {
+		$c = count($f);	
+		assert($c >= 2);
+
+		--$c;
+
+		$t0 = $f[0][0];
+		$t1 = $f[$c][0];
+		
+		for($i = 1; $i < $c; ++$i) {
+			$f[$i][0] = ($f[$i][0] - $t0) / ($t1 - $t0);
+		}
+
+		$f[0][0] = 0.0;
+		$f[$c][0] = 1.0;
+	}
+
+	$npv = function($r, $ticker) use($flows) {
 		$sum = 0.0;
 
-		foreach($flows as $d) {
+		foreach($flows[$ticker] as $d) {
 			$sum += $d[1] / pow($r, $d[0]);
 		}
 
 		return $sum;
 	};
 
-	$r0 = .5;
-	$npv0 = $npv($r0);
-	$r1 = 2;
-	$npv1 = $npv($r1);
+	$ret = [];
 	
-	while(abs($npv1) > 1e-5) {
-		/* Secant method, stolen from Wikipedia */
-		$newr = $r1 - $npv1 * ($r1 - $r0) / ($npv1 - $npv0);
-		$newnpv = $npv($newr);
+	foreach($flows as $tkr => $f) {
+		$r0 = 1.0;
+		$npv0 = $npv($r0, $tkr);
 
-		$r0 = $r1;
-		$npv0 = $npv1;
-		$r1 = $newr;
-		$npv1 = $newnpv;
+		if(abs($npv0) < 1e-5) {
+			$ret[$tkr] = $r0;
+			continue;
+		}
+		
+		$r1 = 1.1;
+		$npv1 = $npv($r1, $tkr);
+	
+		while(abs($npv1) > 1e-5) {
+			/* Secant method, stolen from Wikipedia */
+			$newr = $r1 - $npv1 * ($r1 - $r0) / ($npv1 - $npv0);
+			$newnpv = $npv($newr, $tkr);
+
+			$r0 = $r1;
+			$npv0 = $npv1;
+			$r1 = $newr;
+			$npv1 = $newnpv;
+		}
+
+		$ret[$tkr] = $r1;
 	}
 
-	return $r1;
+	return $ret;
 }

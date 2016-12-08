@@ -217,70 +217,22 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 	$ftable = [];
 	$ftotal = [ 'Ticker' => 'TOT' ];
-	$sortdata = [];
 
 	foreach($periods as $i => $p) {
 		list($k, $start, $end) = $p;
 
-		$agg = [];
-		/* XXX, for obvious reasons */
-		foreach(iterate_time($pf, $start, $end, '+1000 years') as $a) {
-			$agg[] = $a;
-		}
-		assert(count($agg) === 2);
-		list($astart, $aend) = $agg;
+		$irra = irr($pf, $start, $end);
 
-		$ts = 0.0;
-		$te = 0.0;
-		$tg = 0.0;
-
-		foreach($aend['agg'] as $tkr => $enda) {			
-			$starta = $astart['agg'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
-			$delta = $aend['delta'][$tkr] ?? [ 'in' => 0.0, 'out' => 0.0, 'qty' => 0.0, 'realized' => 0.0 ];
-
-			$endval = $enda['qty'] ? get_quote($pf, $tkr, $end) * $enda['qty'] : 0.0;
-			$startval = $starta['qty'] ? get_quote($pf, $tkr, $start) * $starta['qty'] : 0.0;
+		foreach($irra as $tkr => $irr) {
+			$pc = colorize_percentage(100.0 * ($irr - 1.0), $i === 0 ? '%7.2f' : '%5.1f');
 			
-			if($i === 0) {
-				$sortdata[$tkr][0] = $endval;
-				$sortdata[$tkr][1] = $enda['realized'];
+			if($tkr === '__total__') {
+				$ftotal[$k] = $pc;
+			} else {
+				$ftable[$tkr][$k] = $pc;
 			}
-
-			$startval += $delta['in'];
-			$endval += $delta['out'];
-
-			$ts += $startval;
-			$te += $endval;
-			$tg += $delta['realized'];
-
-			/* XXX: probably a bad idea to === floats */
-			if($startval === 0.0 || $endval === $startval) continue;
-			
-			$ftable[$tkr][$k] = colorize_percentage(
-				100.0 * ($endval - $startval + $delta['realized']) / $startval,
-				$i === 0 ? '%7.2f' : '%5.1f'
-			);
 		}
-
-		/* XXX: same here */
-		if($ts === 0.0 || $te === $ts) continue;
-		$ftotal[$k] = colorize_percentage(
-			100.0 * ($te - $ts + $tg) / $ts,
-			$i === 0 ? '%7.2f' : '%5.1f'
-		);
 	}
-
-	uksort($ftable, function($ka, $kb) use(&$sortdata) {
-			if(!isset($sortdata[$ka])) $sortdata[$ka] = [ 0.0, 0.0 ];
-			if(!isset($sortdata[$kb])) $sortdata[$kb] = [ 0.0, 0.0 ];
-			$a = $sortdata[$ka];
-			$b = $sortdata[$kb];
-
-			if($a[0] && $b[0]) return $b[0] <=> $a[0];
-			if($a[0] && !$b[0]) return -1;
-			if(!$a[0] && $b[0]) return 1;
-			return $b[1] <=> $a[1];
-		});
 	
 	foreach($ftable as $ticker => $row) {
 		$row['Ticker'] = (string)$ticker;

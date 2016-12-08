@@ -84,6 +84,10 @@ Columns:
 * `2015`, `2014`, `2013`: performance of this line over the last 3 years
 * `All`: overall performance of this line
 
+Performances are calculated using [IRR (internal rate of
+return)](https://en.wikipedia.org/wiki/Internal_rate_of_return)
+calculation.
+
 ## Performance graph (`plot-perf`)
 
 ~~~
@@ -100,17 +104,6 @@ Parameters:
 ## Portfolio graph (`plot-pf`)
 
 Same parameters as `plot-perf`.
-
-## Internal Rate of Return (`irr`)
-
-Parameters:
-
-* `start:<date>`
-* `end:<date>`
-
-Computes the [internal rate of
-return](https://en.wikipedia.org/wiki/Internal_rate_of_return) over
-the selected time frame. Shows the raw rate and the annualized rate.
 
 ## Transactions view (`ls-tx`)
 
