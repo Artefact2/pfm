@@ -100,16 +100,18 @@ function get_boursorama_rt_quote($isin) {
 			$ticker = get_boursorama_ticker($isin);
 			if($ticker === null) return null;
 
-			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/UpdateCharts?'.rawurlencode(json_encode([
-				'tickers' => $ticker,
-				'periods' => '-2',
+			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.rawurlencode(json_encode([
+				'symbol' => $ticker,
+				'length' => 5,
+				'period' => 1,
+				'guid' => '',
 			])));
 			curl_setopt($c, CURLOPT_HTTPHEADER, [
 				'X-Requested-With: XMLHttpRequest',
 			]);
 			$r = curl_exec($c);
 			$d = json_decode($r, true);
-			return $d['d'][0]['h'];
+			return $d['d']['qd']['o'] ?? null;
 		});
 }
 
@@ -118,22 +120,20 @@ function get_boursorama_history($isin) {
 			$ticker = get_boursorama_ticker($isin);
 			if($ticker === null) return [];
 
-			$c = get_curl(
-				'http://www.boursorama.com/bourse/cours/graphiques/historique.phtml'
-				.'?mo=0&form=OUI&code='.$isin
-				.'&symbole='.$ticker
-				.'&choix_bourse_graf=country%3A33&tc=candlestick&duree=36&pe=0&is=0&mm1=7&mm2=20&mm3=&comp=0'
-				.'&indiceComp=1rPCAC&codeComp=&i1=no&i2=no&i3=no&grap=1'
-			);
+			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.rawurlencode(json_encode([
+				'symbol' => $ticker,
+				'length' => 7300,
+				'period' => 0,
+				'guid' => '',
+			])));
+			curl_setopt($c, CURLOPT_HTTPHEADER, [
+				'X-Requested-With: XMLHttpRequest',
+			]);
+			$r = curl_exec($c);
+			$d = json_decode($r, true);
 
-			if(!preg_match('%"(?<uri>/graphiques/quotes\.phtml?[^"]+)"%', curl_exec($c), $match)) return [];
-			curl_setopt($c, CURLOPT_URL, 'http://www.boursorama.com'.$match['uri']);
-			$j = json_decode(curl_exec($c), true);
-
-			$hist = [];
-
-			foreach($j['dataSets'][0]['dataProvider'] as $row) {
-				$hist[(DateTime::createFromFormat('d/m/Y H:i', $row['d']))->format('Y-m-d')] = $row['c'];
+			foreach($d['d']['QuoteTab'] as $row) {
+				$hist[gmdate('Y-m-d', 86400 * (int)$row['d'])] = (float)$row['l'];
 			}
 
 			return $hist;
