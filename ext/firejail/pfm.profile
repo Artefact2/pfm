@@ -45,7 +45,7 @@ shell none
 private-bin pfm,env,php,sh,tput,gnuplot*
 private-dev
 # XXX: xdg/pfm
-private-etc xdg,php,ssl,fonts
+private-etc xdg,php,ssl,ca-certificates,fonts
 # XXX: qt.qpa.plugin: Could not find the Qt platform plugin "xcb" in ""
 #private-lib php/modules/*.so
 private-opt empty
