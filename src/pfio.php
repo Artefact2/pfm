@@ -39,7 +39,7 @@ function load_pf($path) {
 }
 
 /* Save a portfolio. */
-function save_pf(array $pf, $path) {
+function save_pf(array $pf, string $path): void {
 	$r = file_put_contents($path, json_encode($pf, JSON_PRETTY_PRINT));
 	if($r === false) fatal("Could not save portfolio at %s\n", $path);
 }
