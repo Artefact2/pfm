@@ -1,4 +1,3 @@
-#!/usr/bin/env php
 <?php
 /* Author: Romain Dal Maso <artefact2@gmail.com>
  *
@@ -8,7 +7,7 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-require realpath(__DIR__).'/inc/inc.php';
+require __DIR__.'/inc.php';
 
 ob_start();
 
@@ -72,7 +71,7 @@ case 'add-tx':
 	if(isset($args['sell']) && $args['sell'] === 'all') {
 		$args['sell'] = aggregate_tx($pf, [])[$args['ticker']]['qty'];
 	}
-	
+
 	if(isset($args['buy']) || isset($args['sell'])) {
 		++$nargs;
 		$qty = floatval($args['buy'] ?? -$args['sell']);
@@ -93,7 +92,7 @@ case 'add-tx':
 		++$nargs;
 		$total = floatval($args['total']);
 	}
-	
+
 	if($nargs !== 3) fatal("add-tx: must have three of: (buy|sell), price, fee, total\n");
 
 	if(!isset($qty)) {
@@ -120,7 +119,7 @@ case 'plot-perf':
 	$start = $args['start'] ?? '-1 year';
 	$end = $args['end'] ?? 'now';
 	$abs = $args['absolute'] ?? false;
-	
+
 	if($args['raw'] ?? false) {
 		tsv_perf($pf, STDOUT, $start, $end, $abs);
 	} else {
@@ -131,7 +130,7 @@ case 'plot-perf':
 case 'plot-pf':
 	$start = $args['start'] ?? '-1 year';
 	$end = $args['end'] ?? 'now';
-	
+
 	if($args['raw'] ?? false) {
 		tsv_pf($pf, STDOUT, $start, $end);
 	} else {
@@ -161,7 +160,7 @@ default:
 	fprintf(STDERR, "%s plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
 	fprintf(STDERR, "%s irr [start:<date>] [end:<date>]\n", $me);
 	die(2);
-	
+
 }
 
 save_pf($pf, $pfp);
