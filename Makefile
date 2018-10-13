@@ -1,4 +1,4 @@
-PREFIX?=/usr/local
+PREFIX?=/usr
 
 pfm.phar: $(shell find src -name "*.php")
 	./gen-phar $@ $^

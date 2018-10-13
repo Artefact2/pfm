@@ -14,10 +14,15 @@ Released under the WTFPLv2 license.
 
 ~~~
 make
-sudo make install PREFIX=/usr/local
+sudo make install PREFIX=/usr
+sudo ln -s /usr/bin/firejail /usr/local/bin/pfm
 ~~~
 
 # Usage
+
+~~~
+pfm <command> [command-arguments...]
+~~~
 
 ## Status view (`status`, default)
 
