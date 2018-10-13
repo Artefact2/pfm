@@ -15,7 +15,7 @@ $pfp = get_pf_path();
 $pf = load_pf($pfp);
 
 if($argc === 1) {
-	$argv[] = 'status';
+	$argv[] = 'version';
 	++$argc;
 }
 
@@ -143,22 +143,37 @@ case 'get-quote':
 	printf("%f\n(from: %s)\n", (float)get_quote($pf, $args['ticker'], $args['at'] ?? 'now', $from), $from);
 	break;
 
+case 'version':
+case '-v':
+case '--version':
+	fprintf(STDERR, "pfm version %s, build %s\n\n", trim(file_get_contents(__DIR__.'/../ext/version')), trim(file_get_contents(__DIR__.'/../ext/build-datetime')));
+	fwrite(STDERR, "This program is free software. It comes without any warranty, to the\nextent permitted by applicable law. You can redistribute it and/or\nmodify it under the terms of the Do What The Fuck You Want To Public\nLicense, Version 2, as published by Sam Hocevar. See\nhttp://sam.zoy.org/wtfpl/COPYING for more details.\n\n");
+	fwrite(STDERR, "Run `pfm help` for a list of available commands.\n");
+	break;
+
+case 'help':
+case '-h':
+case '--help':
+	fwrite(STDERR, "Available commands:\n");
+	fwrite(STDERR, "pfm [version]\n");
+	fwrite(STDERR, "pfm help\n");
+	fwrite(STDERR, "pfm status [at:<date>]\n");
+	fwrite(STDERR, "pfm perf [at:<date>] [columns:default|days|weeks|months|years]\n");
+	fwrite(STDERR, "pfm add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>\n");
+	fwrite(STDERR, "pfm rm-line ticker:<ticker>\n");
+	fwrite(STDERR, "pfm edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n");
+	fwrite(STDERR, "pfm ls-lines\n");
+	fwrite(STDERR, "pfm add-tx ticker:<ticker> [sell:<quantity>|all] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n");
+	fwrite(STDERR, "pfm rm-tx <txid>…\n");
+	fwrite(STDERR, "pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n");
+	fwrite(STDERR, "pfm get-quote ticker:<ticker> [at:<date>]\n");
+	fwrite(STDERR, "pfm plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
+	fwrite(STDERR, "pfm plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
+	fwrite(STDERR, "pfm irr [start:<date>] [end:<date>]\n");
+	break;
+
 default:
-	fprintf(STDERR, "Usage:\n");
-	fprintf(STDERR, "%s\n", $me);
-	fprintf(STDERR, "%s status [at:<date>]\n", $me);
-	fprintf(STDERR, "%s perf [at:<date>] [columns:default|days|weeks|months|years]\n", $me);
-	fprintf(STDERR, "%s add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>\n", $me);
-	fprintf(STDERR, "%s rm-line ticker:<ticker>\n", $me);
-	fprintf(STDERR, "%s edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n", $me);
-	fprintf(STDERR, "%s ls-lines\n", $me);
-	fprintf(STDERR, "%s add-tx ticker:<ticker> [sell:<quantity>|all] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n", $me);
-	fprintf(STDERR, "%s rm-tx <txid>…\n", $me);
-	fprintf(STDERR, "%s ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n", $me);
-	fprintf(STDERR, "%s get-quote ticker:<ticker> [at:<date>]\n", $me);
-	fprintf(STDERR, "%s plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
-	fprintf(STDERR, "%s plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n", $me);
-	fprintf(STDERR, "%s irr [start:<date>] [end:<date>]\n", $me);
+	fprintf(STDERR, "pfm: unknown command %s\n", $cmd);
 	die(2);
 
 }

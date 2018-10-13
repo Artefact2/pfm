@@ -1,7 +1,9 @@
 PREFIX?=/usr
 
 pfm.phar: $(shell find src -name "*.php")
-	./gen-phar $@ $^
+	git describe --always > ext/version
+	date -uIns > ext/build-datetime
+	./gen-phar $@ $^ ext/version ext/build-datetime
 
 clean:
 	rm -f pfm.phar

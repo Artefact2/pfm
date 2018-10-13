@@ -24,7 +24,7 @@ sudo ln -s /usr/bin/firejail /usr/local/bin/pfm
 pfm <command> [command-arguments...]
 ~~~
 
-## Status view (`status`, default)
+## Status view (`status`)
 
 Parameters:
 
