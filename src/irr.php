@@ -7,7 +7,7 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-function irr(array $pf, $start, $end) {
+function irr(array &$pf, $start, $end) {
 	$start = maybe_strtotime($start);
 	$end = maybe_strtotime($end);
 

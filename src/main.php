@@ -140,7 +140,12 @@ case 'plot-pf':
 
 case 'get-quote':
 	if(!isset($args['ticker'])) fatal("Missing argument ticker\n");
-	printf("%f\n(from: %s)\n", (float)get_quote($pf, $args['ticker'], $args['at'] ?? 'now', $from), $from);
+	$q = get_quote($pf, $args['ticker'], $args['at'] ?? 'now');
+	if($q === null) {
+		echo "NULL\n";
+	} else {
+		printf("%.2f\n", $q);
+	}
 	break;
 
 case 'version':
