@@ -100,12 +100,12 @@ function get_boursorama_rt_quote($isin) {
 			$ticker = get_boursorama_ticker($isin);
 			if($ticker === null) return null;
 
-			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.rawurlencode(json_encode([
+			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.http_build_query([
 				'symbol' => $ticker,
 				'length' => 5,
 				'period' => 1,
 				'guid' => '',
-			])));
+			]));
 			curl_setopt($c, CURLOPT_HTTPHEADER, [
 				'X-Requested-With: XMLHttpRequest',
 			]);
@@ -120,12 +120,12 @@ function get_boursorama_history($isin) {
 			$ticker = get_boursorama_ticker($isin);
 			if($ticker === null) return [];
 
-			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.rawurlencode(json_encode([
+			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.http_build_query([
 				'symbol' => $ticker,
 				'length' => 7300,
 				'period' => 0,
 				'guid' => '',
-			])));
+			]));
 			curl_setopt($c, CURLOPT_HTTPHEADER, [
 				'X-Requested-With: XMLHttpRequest',
 			]);
