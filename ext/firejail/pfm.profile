@@ -28,9 +28,6 @@ read-only ~
 read-write ~/.cache/pfm
 read-write ~/.local/share/pfm
 
-# XXX
-whitelist ~/.config/pfm.json
-
 caps.drop all
 machine-id
 memory-deny-write-execute

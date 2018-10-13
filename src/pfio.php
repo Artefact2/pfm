@@ -12,13 +12,13 @@
 function load_pf($path) {
 	if(!file_exists($path)) {
 		notice("Creating empty portfolio at %s\n", $path);
-		
+
 		return [
 			'pfm-version' => 1,
 			'lines' => [],
 			'tx' => [],
 		];
-		
+
 	} else {
 		$pf = json_decode(file_get_contents($path), true);
 		if($pf === false) fatal("Could not read portfolio at %s\n", $path);
@@ -33,7 +33,7 @@ function load_pf($path) {
 		usort($pf['tx'], function($a, $b) {
 			return $a['ts'] <=> $b['ts'];
 		});
-		
+
 		return $pf;
 	}
 }
@@ -45,13 +45,22 @@ function save_pf(array $pf, $path) {
 }
 
 /* Get the default portfolio path. Can be overridden with
- * PFM_PORTFOLIO environment variable. */
-function get_pf_path() {
-	$pfp = getenv('PFM_PORTFOLIO');
+ * PFM_PORTFOLIO_FILE environment variable. */
+function get_pf_path(): string {
+	$pfp = getenv('PFM_PORTFOLIO_FILE');
 	if($pfp !== false) return $pfp;
 
-	$confdir = getenv('XDG_CONFIG_HOME');
-	if($confdir === false) $confdir = getenv('HOME').'/.config';
+	return get_paths()['data-home'].'/pfm.json';
+}
 
-	return $confdir.'/pfm.json';
+function getenv_fb(string $name, string $fallback): string {
+	$val = getenv($name);
+	return ($val !== false) ? $val : $fallback;
+}
+
+function get_paths(): array {
+	static $paths = [];
+	if($paths !== []) return $paths;
+	$paths['data-home'] = getenv_fb('XDG_DATA_HOME', getenv('HOME').'/.local/share').'/pfm';
+	return $paths;
 }
