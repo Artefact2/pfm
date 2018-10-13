@@ -32,14 +32,8 @@ function notice(...$params) {
  * $ttl seconds.
  */
 function get_cached_thing($id, $ttl, callable $generate) {
-	static $cachedir = null;
-
-	if($cachedir === null) {
-		$cachedir = getenv('XDG_CACHE_HOME');
-		if($cachedir === false) $cachedir = getenv('HOME').'/.cache';
-		$cachedir .= '/pfm';
-		if(!is_dir($cachedir)) mkdir($cachedir, 0700, true);
-	}
+	$cachedir = get_paths()['cache-home'];
+	if(!is_dir($cachedir)) mkdir($cachedir, 0700, true);
 
 	$f = $cachedir.'/'.$id;
 
@@ -124,14 +118,14 @@ function colorize_percentage($pc, $fmt = '%6.2f', $hi = null, $low = null, $negh
 	if($label === null) $label = $pc;
 
 	$out = $colorseqs['bold'];
-	
+
 	if($pc > $hi) $out .= $colorseqs['green'];
 	else if($pc > $low) $out .= $colorseqs['cyan'];
 	else if($pc < $neghi) $out .= $colorseqs['magenta'];
 	else if($pc < $neglow) $out .= $colorseqs['red'];
-	
+
 	$out .= sprintf($fmt, $label);
 	$out .= $colorseqs['reset'];
-	
+
 	return $out;
 }

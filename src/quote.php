@@ -15,9 +15,6 @@
  * @returns a price or null if no price could be fetched
  */
 function get_quote($pf, $ticker, $date = 'now', &$from = null) {
-	$cachedir = getenv('XDG_CACHE_HOME');
-	if($cachedir === false) $cachedir = getenv('HOME').'/.cache';
-
 	if(!isset($pf['lines'][$ticker])) {
 		fatal("Unknown ticker %s\n", $ticker);
 	}

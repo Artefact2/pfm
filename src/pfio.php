@@ -62,5 +62,6 @@ function get_paths(): array {
 	static $paths = [];
 	if($paths !== []) return $paths;
 	$paths['data-home'] = getenv_fb('XDG_DATA_HOME', getenv('HOME').'/.local/share').'/pfm';
+	$paths['cache-home'] = getenv_fb('XDG_CACHE_HOME', getenv('HOME').'/.cache').'/pfm';
 	return $paths;
 }
