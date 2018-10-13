@@ -9,7 +9,7 @@
 
 function add_tx(array &$pf, $ticker, $buy, $price, $fee, $date) {
 	$ts = maybe_strtotime($date);
-	
+
 	$pf['tx'][] = [
 		'ticker' => $ticker,
 		'buy' => (float)$buy,
@@ -47,7 +47,7 @@ function ls_tx(array &$pf, array $filters = []) {
 	$ticker = $filters['ticker'] ?? null;
 	$before = isset($filters['before']) ? maybe_strtotime($filters['before']) : null;
 	$after = isset($filters['after']) ? maybe_strtotime($filters['after']) : null;
-	
+
 	foreach($pf['tx'] as $k => $tx) {
 		if($ticker !== null && $ticker !== $tx['ticker']) continue;
 		if($before !== null && $tx['ts'] > $before) continue;
@@ -68,7 +68,7 @@ function ls_tx(array &$pf, array $filters = []) {
 
 function aggregate_tx(array $pf, array $filters = [], array &$totals = null) {
 	$before = $filters['before'] ?? 'now';
-	
+
 	foreach(iterate_time($pf, $before, $before) as $res) {
 		$totals = $res['totals'];
 		return $res['agg'];
@@ -90,14 +90,14 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 		'realized' => 0.0,
 		'qty' => 0.0,
 	];
-	
+
 	$agg = [];
 	$totals = $blank;
-	
+
 	while($start <= $end) {
 		$delta = [];
 		$dtotals = $blank;
-		
+
 		while($tx !== false && $tx['ts'] <= $start) {
 			$tkr = $tx['ticker'];
 
@@ -111,7 +111,7 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 
 			if($tx['buy'] > 0) {
 				$in = $tx['buy'] * $tx['price'];
-				
+
 				$agg[$tkr]['in'] += $in;
 				$delta[$tkr]['in'] += $in;
 				$totals['in'] += $in;
@@ -124,7 +124,7 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 				$delta[$tkr]['out'] += $out;
 				$totals['out'] += $out;
 				$dtotals['out'] += $out;
-				
+
 				$agg[$tkr]['realized'] += $realized;
 				$delta[$tkr]['realized'] += $realized;
 				$totals['realized'] += $realized;
@@ -133,14 +133,14 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 
 			$agg[$tkr]['qty'] += $tx['buy'];
 			$delta[$tkr]['qty'] += $tx['buy'];
-			
+
 			$agg[$tkr]['realized'] -= $tx['fee'];
 			$delta[$tkr]['realized'] -= $tx['fee'];
 			$totals['realized'] -= $tx['fee'];
 			$dtotals['realized'] -= $tx['fee'];
 
 			if(abs($agg[$tkr]['qty']) < 1e-6) $agg[$tkr]['qty'] = 0;
-			
+
 			$tx = next($txs);
 		}
 
@@ -152,7 +152,7 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 		];
 
 		if($start === $end) return;
-		
+
 		$start = strtotime($interval, $start);
 		if($start > $end) $start = $end;
 	}

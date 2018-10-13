@@ -12,16 +12,16 @@ function irr(array $pf, $start, $end) {
 	$end = maybe_strtotime($end);
 
 	$flows = [ '__total__' => [] ];
-	
+
 	foreach(iterate_time($pf, $start, $end) as $ts => $data) {
 		$t = ($ts - $start) / ($end - $start);
-		
+
 		if($ts === $start || $ts === $end) {
 			$tval = 0.0;
 
 			foreach($data['agg'] as $ticker => $tdata) {
 				if(!$tdata['qty']) continue;
-				
+
 				$tval += $val = $tdata['qty'] * get_quote($pf, $ticker, $ts);
 				$flows[$ticker][] = [
 					$t,
@@ -33,20 +33,20 @@ function irr(array $pf, $start, $end) {
 				$t,
 				$ts === $start ? $tval : -$tval,
 			];
-			
+
 			continue;
 		}
 
 		$tdnav = 0;
 
-		foreach($data['delta'] as $tkr => $delta) {			
+		foreach($data['delta'] as $tkr => $delta) {
 			$tdnav += $dnav = $delta['in'] - $delta['out'] - $delta['realized'];
 
 			if($dnav) {
 				if(!isset($flows[$tkr])) {
 					$flows[$tkr] = [];
 				}
-				
+
 				$flows[$tkr][] = [ $t, $dnav ];
 			}
 		}
@@ -57,14 +57,14 @@ function irr(array $pf, $start, $end) {
 	}
 
 	foreach($flows as &$f) {
-		$c = count($f);	
+		$c = count($f);
 		assert($c >= 2);
 
 		--$c;
 
 		$t0 = $f[0][0];
 		$t1 = $f[$c][0];
-		
+
 		for($i = 1; $i < $c; ++$i) {
 			$f[$i][0] = ($f[$i][0] - $t0) / ($t1 - $t0);
 		}
@@ -84,7 +84,7 @@ function irr(array $pf, $start, $end) {
 	};
 
 	$ret = [];
-	
+
 	foreach($flows as $tkr => $f) {
 		$r0 = 1.0;
 		$npv0 = $npv($r0, $tkr);
@@ -93,10 +93,10 @@ function irr(array $pf, $start, $end) {
 			$ret[$tkr] = $r0;
 			continue;
 		}
-		
+
 		$r1 = 1.1;
 		$npv1 = $npv($r1, $tkr);
-	
+
 		while(abs($npv1) > 1e-5) {
 			/* Secant method, stolen from Wikipedia */
 			$newr = $r1 - $npv1 * ($r1 - $r0) / ($npv1 - $npv0);
