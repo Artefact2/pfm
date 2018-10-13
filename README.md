@@ -7,7 +7,8 @@ Released under the WTFPLv2 license.
 # Dependencies
 
 * PHP ≥ 7 (cli only)
-* Gnuplot (for plot commands)
+* Gnuplot (optional; for plot commands)
+* Firejail (optional)
 
 # Install
 
