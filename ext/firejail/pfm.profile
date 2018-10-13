@@ -30,7 +30,7 @@ read-write ~/.local/share/pfm
 
 caps.drop all
 machine-id
-memory-deny-write-execute
+#memory-deny-write-execute
 nodvd
 nogroups
 nonewprivs
