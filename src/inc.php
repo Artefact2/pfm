@@ -16,6 +16,7 @@ require __DIR__.'/status.php';
 require __DIR__.'/quote.php';
 require __DIR__.'/plot.php';
 require __DIR__.'/irr.php';
+require __DIR__.'/gnucash.php';
 
 function fatal(...$params): void {
 	fprintf(STDERR, ...$params);

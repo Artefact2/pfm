@@ -148,6 +148,15 @@ case 'get-quote':
 	}
 	break;
 
+case 'quotes-to-gnucash':
+	if(count($args) !== 1 || !isset($args[0])) {
+		fatal("quotes-to-gnucash expects exactly one unnamed argument\n");
+	}
+	$d = load_gnucash($args[0]);
+	insert_gnucash_quotes($pf, $d);
+	save_gnucash($args[0], $d);
+	break;
+
 case 'version':
 case '-v':
 case '--version':
@@ -177,7 +186,7 @@ case '--help':
 	fwrite(STDERR, "pfm get-quote ticker:<ticker> [at:<date>]\n");
 	fwrite(STDERR, "pfm plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
 	fwrite(STDERR, "pfm plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
-	fwrite(STDERR, "pfm irr [start:<date>] [end:<date>]\n");
+	fwrite(STDERR, "pfm quotes-to-gnucash input.gnucash\n");
 	break;
 
 default:
