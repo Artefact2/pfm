@@ -72,6 +72,7 @@ function irr(array &$pf, $start, $end) {
 		$f[0][0] = 0.0;
 		$f[$c][0] = 1.0;
 	}
+	unset($f);
 
 	$npv = function($r, $ticker) use($flows) {
 		$sum = 0.0;
