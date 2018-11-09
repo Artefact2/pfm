@@ -91,7 +91,7 @@ function get_boursorama_rt_quote($isin): ?float {
 			fwrite(STDOUT, '.');
 			$r = curl_exec($c);
 			$d = json_decode($r, true);
-			return $d['d']['qd']['o'] ?? null;
+			return $d['d']['qd']['c'] ?? null;
 		});
 }
 
