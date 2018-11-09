@@ -29,12 +29,12 @@ function status(array &$pf, $date = 'now') {
 	$totals['value'] = 0.0;
 	$totals['unrealized'] = 0.0;
 
-	foreach($agg as $tkr => &$a) {		
+	foreach($agg as $tkr => &$a) {
 		if(!$a['qty']) {
 			$a['value'] = 0;
 			continue;
 		}
-		
+
 		$a['price'] = get_quote($pf, $tkr, $date);
 		$totals['value'] += $a['value'] = $a['price'] * $a['qty'];
 		$totals['unrealized'] += $a['unrealized'] = $a['value'] - $a['in'] + $a['out'];
@@ -47,7 +47,7 @@ function status(array &$pf, $date = 'now') {
 		if(!$a['qty'] && $b['qty']) return 1;
 		return $b['realized'] <=> $a['realized'];
 	});
-	
+
 	foreach($agg as $tkr => $a) {
 		if(!$a['qty']) {
 			print_row($fmt, [
@@ -56,7 +56,7 @@ function status(array &$pf, $date = 'now') {
 			]);
 			continue;
 		}
-		
+
 		print_row($fmt, [
 			'Tkr' => (string)$tkr,
 			'%Wgt' => 100.0 * $a['value'] / $totals['value'],
@@ -92,19 +92,19 @@ function status(array &$pf, $date = 'now') {
 
 function perf(array &$pf, $date = 'now', $columns = 'default') {
 	$ts = maybe_strtotime($date);
-    
+
 	$fmt = [
 		'Ticker' => [ '%8s' ],
 	];
 
 	switch($columns) {
-		
+
 	case 'default':
 		$startday = strtotime('yesterday', $ts);
 		$periods[] = [
 			'Day', $startday, $ts, '%7.2f', '%7s'
 		];
-		
+
 		$periods[] = [
 			'WtD', strtotime('last sunday', $ts), $ts, '%5.1f', '%5s'
 		];
@@ -203,10 +203,10 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 	default:
 		fatal("perf(): unknown column type %s\n", $columns);
 		break;
-		
+
 	}
 
-	foreach($periods as $p) {			
+	foreach($periods as $p) {
 		$fmt[$p[0]] = [
 			$p[4], $p[4]
 		];
@@ -225,7 +225,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 
 		foreach($irra as $tkr => $irr) {
 			$pc = colorize_percentage(100.0 * ($irr - 1.0), $i === 0 ? '%7.2f' : '%5.1f');
-			
+
 			if($tkr === '__total__') {
 				$ftotal[$k] = $pc;
 			} else {
@@ -233,7 +233,7 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 			}
 		}
 	}
-	
+
 	foreach($ftable as $ticker => $row) {
 		$row['Ticker'] = (string)$ticker;
 		print_row($fmt, $row);
