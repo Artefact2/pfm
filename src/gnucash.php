@@ -73,7 +73,7 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 	foreach($pf['tx'] as $tx) {
 		if($tx['ts'] < $start) $start = $tx['ts'];
 	}
-	foreach(iterate_time($pf, $start, time(), '+7 days') as $date => $data) {
+	foreach(iterate_time($pf, $start, time() - 86400, '+1 day') as $date => $data) {
 		foreach($data['agg'] as $ticker => $agg) {
 			if(!isset($commodities[$ticker])) continue;
 			if($agg['qty'] < 0.0001) { /* XXX */
