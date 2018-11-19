@@ -87,29 +87,19 @@ function irr(array &$pf, $start, $end) {
 	$ret = [];
 
 	foreach($flows as $tkr => $f) {
-		$r0 = 1.0;
-		$npv0 = $npv($r0, $tkr);
+		$l = 0.0;
+		$u = 1000.0; /* XXX */
 
-		if(abs($npv0) < 1e-5) {
-			$ret[$tkr] = $r0;
-			continue;
+		while($u - $l > 1e-5) {
+			$x = ($l + $u) * .5;
+			if($npv($x, $tkr) > 0) {
+				$u = $x;
+			} else {
+				$l = $x;
+			}
 		}
 
-		$r1 = 1.1;
-		$npv1 = $npv($r1, $tkr);
-
-		while(abs($npv1) > 1e-5) {
-			/* Secant method, stolen from Wikipedia */
-			$newr = $r1 - $npv1 * ($r1 - $r0) / ($npv1 - $npv0);
-			$newnpv = $npv($newr, $tkr);
-
-			$r0 = $r1;
-			$npv0 = $npv1;
-			$r1 = $newr;
-			$npv1 = $newnpv;
-		}
-
-		$ret[$tkr] = $r1;
+		$ret[$tkr] = $l;
 	}
 
 	return $ret;
