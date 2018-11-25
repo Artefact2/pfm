@@ -35,10 +35,12 @@ foreach($argv as $arg) {
 switch($cmd) {
 
 case 'status':
+case 's':
 	status($pf, $args['at'] ?? 'now');
 	break;
 
 case 'perf':
+case 'p':
 	perf($pf, $args['at'] ?? 'now', $args['columns'] ?? 'default');
 	break;
 
@@ -169,24 +171,25 @@ case '--version':
 	break;
 
 case 'help':
+case 'h':
 case '-h':
 case '--help':
 	fwrite(STDERR, "Available commands:\n");
 	fwrite(STDERR, "pfm [version]\n");
-	fwrite(STDERR, "pfm help\n");
-	fwrite(STDERR, "pfm status [at:<date>]\n");
-	fwrite(STDERR, "pfm perf [at:<date>] [columns:default|days|weeks|months|years]\n");
+	fwrite(STDERR, "pfm help|h\n");
+	fwrite(STDERR, "pfm status|s [at:<date>]\n");
+	fwrite(STDERR, "pfm perf|p [at:<date>] [columns:default|days|weeks|months|years]\n");
 	fwrite(STDERR, "pfm add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>\n");
 	fwrite(STDERR, "pfm rm-line ticker:<ticker>\n");
 	fwrite(STDERR, "pfm edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n");
 	fwrite(STDERR, "pfm ls-lines\n");
 	fwrite(STDERR, "pfm add-tx ticker:<ticker> [sell:<quantity>|all] [buy:<quantity>] [price:<unit-price>] [fee:<fee>] [total:<total>] [date:<date>]\n");
-	fwrite(STDERR, "pfm rm-tx <txid>…\n");
+	fwrite(STDERR, "pfm rm-tx <txid>...\n");
 	fwrite(STDERR, "pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n");
 	fwrite(STDERR, "pfm get-quote ticker:<ticker> [at:<date>]\n");
 	fwrite(STDERR, "pfm plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
 	fwrite(STDERR, "pfm plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
-	fwrite(STDERR, "pfm quotes-to-gnucash input.gnucash\n");
+	fwrite(STDERR, "pfm quotes-to-gnucash <file.gnucash>\n");
 	break;
 
 default:
