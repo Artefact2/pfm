@@ -4,6 +4,10 @@ A simple command-line stock portfolio manager.
 
 Released under the WTFPLv2 license.
 
+# Demo
+
+[![asciicast](https://asciinema.org/a/XYRN7O4hZe9nSgYFipeQ56tLe.svg)](https://asciinema.org/a/XYRN7O4hZe9nSgYFipeQ56tLe)
+
 # Dependencies
 
 * PHP ≥ 7 (cli only)
