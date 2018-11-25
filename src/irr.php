@@ -87,6 +87,11 @@ function irr(array &$pf, $start, $end) {
 	$ret = [];
 
 	foreach($flows as $tkr => $f) {
+		if(count($f) == 2 && $f[0][1] < 1e-2 && $f[1][1] < 1e-2) {
+			$ret[$tkr] = 1.0;
+			continue;
+		}
+
 		$l = 0.0;
 		$u = 1000.0; /* XXX */
 
