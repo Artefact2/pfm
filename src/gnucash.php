@@ -66,9 +66,7 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 	$p = $p->item(0);
 	assert($p->getAttribute('version') === '1');
 
-	/* XXX: smarter pruning */
-	while($p->firstChild !== null) $p->removeChild($p->firstChild);
-
+	$frag = $d->createDocumentFragment();
 	$start = PHP_INT_MAX;
 	foreach($pf['tx'] as $tx) {
 		if($tx['ts'] < $start) $start = $tx['ts'];
@@ -84,37 +82,19 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 			$quote = get_quote($pf, $ticker, $date);
 			if($quote === null) continue;
 
-			$p->appendChild($price = $d->createElement('price'));
-
-			$price->appendChild($nid = $d->createElementNS('http://www.gnucash.org/XML/price', 'id'));
-			$nid->setAttribute('type', 'guid');
-			$nid->appendChild($d->createTextNode(sha1('pfm-'.$ticker.'-'.$date)));
-
-			$price->appendChild($commodity = $d->createElementNS('http://www.gnucash.org/XML/price', 'commodity'));
-			$commodity->appendChild($nspace = $d->createElementNS('http://www.gnucash.org/XML/cmdty', 'space'));
-			$nspace->appendChild($d->createTextNode($space));
-			$commodity->appendChild($nid = $d->createElementNS('http://www.gnucash.org/XML/cmdty', 'id'));
-			$nid->appendChild($d->createTextNode($id));
-
-			$price->appendChild($currency = $d->createElementNS('http://www.gnucash.org/XML/price', 'currency'));
-			$currency->appendChild($nspace = $d->createElementNS('http://www.gnucash.org/XML/cmdty', 'space'));
-			$nspace->appendChild($d->createTextNode('CURRENCY'));
-			$currency->appendChild($nid = $d->createElementNS('http://www.gnucash.org/XML/cmdty', 'id'));
-			$nid->appendChild($d->createTextNode($pf['lines'][$ticker]['currency']));
-
-			$price->appendChild($time = $d->createElementNS('http://www.gnucash.org/XML/price', 'time'));
-			$time->appendChild($ndate = $d->createElementNS('http://www.gnucash.org/XML/ts', 'date'));
-			$ndate->appendChild($d->createTextNode(date('Y-m-d', $date).' 00:00:00 +0000'));
-
-			$price->appendChild($source = $d->createElementNS('http://www.gnucash.org/XML/price', 'source'));
-			$source->appendChild($d->createTextNode('user:price-editor'));
-
-			$price->appendChild($type = $d->createElementNS('http://www.gnucash.org/XML/price', 'type'));
-			$type->appendChild($d->createTextNode('unknown'));
-
-			$price->appendChild($value = $d->createElementNS('http://www.gnucash.org/XML/price', 'value'));
-			$value->appendChild($d->createTextNode(sprintf('%d/%d', (int)($quote * 1000), 1000)));;
-
+			$frag->appendXML(sprintf(
+				'<price xmlns:price="http://www.gnucash.org/XML/price" xmlns:cmdty="http://www.gnucash.org/XML/cmdty" xmlns:ts="http://www.gnucash.org/XML/ts"><price:id type="guid">%s</price:id><price:commodity><cmdty:space>%s</cmdty:space><cmdty:id>%s</cmdty:id></price:commodity><price:currency><cmdty:space>CURRENCY</cmdty:space><cmdty:id>%s</cmdty:id></price:currency><price:time><ts:date>%s</ts:date></price:time><price:source>user:price-editor</price:source><price:type>unknown</price:type><price:value>%d/%d</price:value></price>',
+				sha1('pfm-'.$ticker.'-'.$date),
+				$space,
+				$id,
+				$pf['lines'][$ticker]['currency'],
+				gmdate('Y-m-d', $date).' 00:00:00 +0000',
+				(int)($quote * 1000), 1000
+			));
 		}
 	}
+
+	/* XXX: smarter pruning */
+	while($p->firstChild !== null) $p->removeChild($p->firstChild);
+	$p->appendChild($frag);
 }
