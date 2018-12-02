@@ -7,43 +7,38 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-function tsv_perf(array $pf, $stream, $start, $end, $absolute = true) {	
+function tsv_gains(array $pf, $stream, $start, $end) {
 	$start = strtotime(date('Y-m-d', maybe_strtotime($start)));
 	$end = strtotime(date('Y-m-d', maybe_strtotime($end)));
 
+	fwrite($stream, "Timestamp\tBasis\tRealized\tUnrealized\n");
+
 	foreach(iterate_time($pf, $start, $end) as $ts => $d) {
-			$in = $d['totals']['in'] - $d['totals']['out'];
+			$basis = $d['totals']['in'] - $d['totals']['out'];
 			$real = $d['totals']['realized'];
-			if(!$in) $continue;
-			
-			$value = 0.0;
+			if(!$basis) $continue;
+
+			$unreal = -$basis;
 			foreach($d['agg'] as $tkr => $a) {
 				if(!$a['qty']) continue;
-				$value += $a['qty'] * get_quote($pf, $tkr, $ts);
+				$unreal += $a['qty'] * get_quote($pf, $tkr, $ts);
 			}
 
-			if($absolute) {
-				$line = sprintf("%f\t%f\t%f", $in, $value - $in, $real);
-			} else {
-				$line = sprintf("%f\t%f\t%f", 100.0, 100.0 * ($value - $in) / $in, 100.0 * $real / $in);
-			}
-			
-			fprintf($stream, "%d\t%s\n", $ts, $line);
-			fprintf($stream, "%d\t%s\n", strtotime('+1 day', $ts) - 1, $line);
+			fprintf($stream, "%d\t%f\t%f\t%f\n", $ts, $basis, $real, $unreal);
 	}
 }
 
-function plot_perf(array $pf, $start, $end, $absolute = true) {
+function plot_gains(array $pf, $start, $end, $absolute = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
-	tsv_perf($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute);
+	tsv_gains($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute);
 	fclose($datf);
-	
+
+	/* XXX: read preamble from config file (term size/type) */
 	$sf = popen('gnuplot -p', 'wb');
+	fwrite($sf, "set terminal qt size 1920,1080\n");
 	fwrite($sf, "set xdata time\n");
 	fwrite($sf, "set timefmt '%s'\n");
 	fprintf($sf, "set xrange ['%d':'%d']\n", maybe_strtotime($start), maybe_strtotime($end));
-	fwrite($sf, "set yrange [0<*:]\n");
-	fwrite($sf, "set style fill solid .5 noborder\n");
 	fwrite($sf, "set grid xtics\n");
 	fwrite($sf, "set grid mxtics\n");
 	fwrite($sf, "set grid ytics\n");
@@ -51,14 +46,14 @@ function plot_perf(array $pf, $start, $end, $absolute = true) {
 	fwrite($sf, "set mytics 2\n");
 	fwrite($sf, "set xtics format '%Y-%m-%d' rotate by -90\n");
 	fwrite($sf, "show grid\n");
-	fwrite($sf, "set key outside\n");
+	fwrite($sf, "set key top left inside\n");
 	fprintf(
 		$sf,
-		"plot '%s' using 1:2 with filledcurves above y1=0 linecolor '#E0F0E0' title 'Money In', '%s' using 1:(\$2+\$3):2 with filledcurves above linecolor '#008000' title 'Unrealized Gains', '%s' using 1:(\$2+\$3):2 with filledcurves below linecolor '#800000' title 'Unrealized Losses', '%s' using 1:4 with lines linecolor '#008000' title 'Realized Gains'",
+		"plot '%s' using (column('Timestamp')):(%s) with lines title 'Basis' linewidth 2, '' using (column('Timestamp')):(%s) with lines title 'Realized' linewidth 2, '' using (column('Timestamp')):(%s) with lines title 'Unrealized' linewidth 2\n",
 		$dat,
-		$dat,
-		$dat,
-		$dat
+		$absolute ? "column('Basis')" : "100.0",
+		$absolute ? "column('Realized')" : "100.0 * column('Realized') / column('Basis')",
+		$absolute ? "column('Unrealized')" : "100.0 * column('Unrealized') / column('Basis')"
 	);
 
 	fwrite($sf, "\n");
@@ -68,7 +63,7 @@ function plot_perf(array $pf, $start, $end, $absolute = true) {
 
 function tsv_pf(array $pf, $out, $start, $end, &$used = null) {
 	$used = [];
-	
+
 	foreach(iterate_time($pf, $start, $end) as $ts => $d) {
 		foreach([ $ts, strtotime('+1 day', $ts) - 1 ] as $t) {
 			fprintf($out, "%d", $t);
@@ -91,8 +86,9 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
 	tsv_pf($pf, $datf = fopen($dat, 'wb'), $start, $end, $used);
 	fclose($datf);
-	
+
 	$sf = popen('gnuplot -p', 'wb');
+	fwrite($sf, "set size ratio .5625\n");
 	fwrite($sf, "set xdata time\n");
 	fwrite($sf, "set timefmt '%s'\n");
 	fprintf($sf, "set xrange ['%s':'%s']\n", maybe_strtotime($start), maybe_strtotime($end));
@@ -117,15 +113,15 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	$base = '0';
 	$n = count($used);
 	$j = 0;
-	
+
 	foreach($pf['lines'] as $tkr => $l) {
 		if(!isset($used[$tkr])) {
 			++$i;
 			continue;
 		}
-		
+
 		if($j) fwrite($sf, ', ');
-		
+
 		fprintf(
 			$sf,
 			"'%s' using 1:((%s+\$%d)/(%s)):((%s)/(%s)) with filledcurves linecolor '%s' title '%s'",
@@ -140,10 +136,10 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 		);
 
 		$base .= '+$'.$i;
-		
+
 		++$i;
 	}
-	
+
 	fwrite($sf, "\n");
 	fclose($sf);
 	unlink($dat);
@@ -154,7 +150,7 @@ function hsl_to_rgb($h, $s, $l) {
 
 	$c = (1.0 - abs(2.0 * $l - 1.0)) * $s;
 	$x = $c * (1.0 - abs(fmod($h, 2.0) - 1));
-	
+
 	list($r, $g, $b) = [
 		[ $c, $x, 0.0 ],
 		[ $x, $c, 0.0 ],
