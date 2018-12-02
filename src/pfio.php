@@ -63,5 +63,23 @@ function get_paths(): array {
 	if($paths !== []) return $paths;
 	$paths['data-home'] = getenv_fb('XDG_DATA_HOME', getenv('HOME').'/.local/share').'/pfm';
 	$paths['cache-home'] = getenv_fb('XDG_CACHE_HOME', getenv('HOME').'/.cache').'/pfm';
+	$paths['configs'] = explode(':', getenv_fb('XDG_CONFIG_DIRS', '/etc/xdg'));
+	array_unshift($paths['configs'], getenv_fb('XDG_CONFIG_HOME', getenv('HOME').'/.config'));
+	foreach($paths['configs'] as &$p) $p .= '/pfm';
+	unset($p);
 	return $paths;
+}
+
+function get_config(): array {
+	static $conf = null;
+	if($conf !== null) return $conf;
+
+	$paths = get_paths()['configs'];
+	foreach($paths as $p) {
+		if(file_exists($f = $p.'/pfm.ini') && is_readable($f)) {
+			return $conf = parse_ini_file($f);
+		}
+	}
+
+	fatal("No configuration file found anywhere, please put pfm.ini in one of the following directories: %s\n", implode(', ', $paths));
 }

@@ -33,9 +33,8 @@ function plot_gains(array $pf, $start, $end, $absolute = true) {
 	tsv_gains($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute);
 	fclose($datf);
 
-	/* XXX: read preamble from config file (term size/type) */
 	$sf = popen('gnuplot -p', 'wb');
-	fwrite($sf, "set terminal qt size 1920,1080\n");
+	fwrite($sf, implode("\n", get_config()['gnuplot_preamble'])."\n");
 	fwrite($sf, "set xdata time\n");
 	fwrite($sf, "set timefmt '%s'\n");
 	fprintf($sf, "set xrange ['%d':'%d']\n", maybe_strtotime($start), maybe_strtotime($end));

@@ -12,11 +12,13 @@ install: pfm.phar
 	install $< $(PREFIX)/bin/pfm
 	install -D COPYING $(PREFIX)/share/licenses/pfm/COPYING
 	install -D ext/firejail/pfm.profile /etc/firejail/pfm.profile
+	install -D pfm.ini /etc/xdg/pfm/pfm.ini
 
 uninstall:
 	rm -f $(PREFIX)/bin/pfm
 	rm -f $(PREFIX)/share/licenses/pfm/COPYING
 	rmdir $(PREFIX)/share/licenses/pfm
-	rm -f /etc/firejail/pfm.profile
+	rm -f /etc/firejail/pfm.profile /etc/xdg/pfm/pfm.ini
+	rmdir /etc/xdg/pfm
 
 .PHONY: clean install uninstall

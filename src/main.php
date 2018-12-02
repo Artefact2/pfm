@@ -161,6 +161,7 @@ case '--version':
 	fwrite(STDERR, "This program is free software. It comes without any warranty, to the\nextent permitted by applicable law. You can redistribute it and/or\nmodify it under the terms of the Do What The Fuck You Want To Public\nLicense, Version 2, as published by Sam Hocevar. See\nhttp://sam.zoy.org/wtfpl/COPYING for more details.\n\n");
 	fprintf(STDERR, "Portfolio file: %s, override with PFM_PORTFOLIO_FILE or XDG_DATA_HOME.\n", $pfp);
 	fprintf(STDERR, "Cache directory: %s, override with XDG_CACHE_HOME.\n", get_paths()['cache-home']);
+	fprintf(STDERR, "Config directories: %s, override with XDG_CONFIG_DIRS or XDG_CONFIG_HOME.\n", implode(':', get_paths()['configs']));
 	fwrite(STDERR, "\nRun `pfm help` for a list of available commands.\n");
 	break;
 
