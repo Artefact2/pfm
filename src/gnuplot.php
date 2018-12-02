@@ -60,34 +60,42 @@ function plot_gains(array $pf, $start, $end, $absolute = true) {
 	unlink($dat);
 }
 
-function tsv_pf(array $pf, $out, $start, $end, &$used = null) {
+function tsv_lines(array $pf, $out, $start, $end, &$used = null) {
 	$used = [];
+
+	fwrite($out, "Timestamp");
+	foreach($pf['lines'] as $tkr => $l) {
+		fprintf($out, "\ti%s\to%s\tn%s\tp%s", $tkr, $tkr, $tkr, $tkr);
+	}
+	fwrite($out, "\n");
 
 	foreach(iterate_time($pf, $start, $end) as $ts => $d) {
 		foreach([ $ts, strtotime('+1 day', $ts) - 1 ] as $t) {
 			fprintf($out, "%d", $t);
 			foreach($pf['lines'] as $tkr => $l) {
 				if(!isset($d['agg'][$tkr]) || !$d['agg'][$tkr]['qty']) {
-					$value = 0;
+					$num = 0;
+					$quote = 0;
 				} else {
 					$used[$tkr] = true;
-					$value = $d['agg'][$tkr]['qty'] * get_quote($pf, $tkr, $ts);
+					$num = $d['agg'][$tkr]['qty'];
+					$quote = get_quote($pf, $tkr, $ts);
 				}
 
-				fprintf($out, "\t%f", $value);
+				fprintf($out, "\t%f\t%f\t%f\t%f", $d['agg'][$tkr]['in'] ?? 0, $d['agg'][$tkr]['out'] ?? 0, $num, $quote);
 			}
 			fprintf($out, "\n");
 		}
 	}
 }
 
-function plot_pf(array $pf, $start, $end, $absolute = true) {
+function plot_lines(array $pf, $start, $end, $absolute = true, $total = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
-	tsv_pf($pf, $datf = fopen($dat, 'wb'), $start, $end, $used);
+	tsv_lines($pf, $datf = fopen($dat, 'wb'), $start, $end, $used);
 	fclose($datf);
 
 	$sf = popen('gnuplot -p', 'wb');
-	fwrite($sf, "set size ratio .5625\n");
+	fwrite($sf, implode("\n", get_config()['gnuplot_preamble'])."\n");
 	fwrite($sf, "set xdata time\n");
 	fwrite($sf, "set timefmt '%s'\n");
 	fprintf($sf, "set xrange ['%s':'%s']\n", maybe_strtotime($start), maybe_strtotime($end));
@@ -98,73 +106,42 @@ function plot_pf(array $pf, $start, $end, $absolute = true) {
 	fwrite($sf, "set mytics 2\n");
 	fwrite($sf, "set xtics format '%Y-%m-%d' rotate by -90\n");
 	fwrite($sf, "show grid\n");
-	fwrite($sf, "set key outside\n");
+	fwrite($sf, "set key inside top left\n");
 
 	if(!$absolute) {
-		fwrite($sf, "set yrange [0:100]\n");
-		$tot = '$'.implode('+$', range(2, count($pf['lines'])+1));
-		$tot = '(('.$tot.')/100)';
+		fwrite($sf, "set yrange [0:*<100]\n");
 	}
 
-
-	fwrite($sf, "plot ");
-	$i = 2;
-	$base = '0';
-	$n = count($used);
-	$j = 0;
+	$tot = [];
+	$plots = [];
 
 	foreach($pf['lines'] as $tkr => $l) {
 		if(!isset($used[$tkr])) {
-			++$i;
 			continue;
 		}
 
-		if($j) fwrite($sf, ', ');
+		$tot[$tkr] = sprintf('column("n%s")*column("p%s")', $tkr, $tkr);
+	}
+	$totstr = implode('+', $tot);
 
-		fprintf(
-			$sf,
-			"'%s' using 1:((%s+\$%d)/(%s)):((%s)/(%s)) with filledcurves linecolor '%s' title '%s'",
+	foreach($pf['lines'] as $tkr => $l) {
+		if(!isset($used[$tkr])) {
+			continue;
+		}
+
+		$plots[] = sprintf(
+			"'%s' using (column('Timestamp')):(%s) with lines title '%s' linewidth 2",
 			$dat,
-			$base,
-			$i,
-			$absolute ? 1 : $tot,
-			$base,
-			$absolute ? 1 : $tot,
-			$color = hsl_to_rgb(($j++) / $n, 1.0, 0.4),
+			$absolute ? $tot[$tkr] : sprintf('100.0*(%s)/(%s)', $tot[$tkr], $totstr),
 			$tkr
 		);
-
-		$base .= '+$'.$i;
-
-		++$i;
 	}
 
-	fwrite($sf, "\n");
+	if($total) {
+		$plots[] = sprintf("'' using (column('Timestamp')):(%s) with lines title 'Total' linewidth 2", $absolute ? $totstr : '1.0');
+	}
+
+	fprintf($sf, "plot %s\n", implode(', ', $plots));
 	fclose($sf);
 	unlink($dat);
-}
-
-function hsl_to_rgb($h, $s, $l) {
-	$h = fmod($h, 1.0) * 6.0;
-
-	$c = (1.0 - abs(2.0 * $l - 1.0)) * $s;
-	$x = $c * (1.0 - abs(fmod($h, 2.0) - 1));
-
-	list($r, $g, $b) = [
-		[ $c, $x, 0.0 ],
-		[ $x, $c, 0.0 ],
-		[ 0.0, $c, $x ],
-		[ 0.0, $x, $c ],
-		[ $x, 0.0, $c ],
-		[ $c, 0.0, $x ],
-		[ 0.0, 0.0, 0.0 ]
-	][floor($h)];
-
-	$m = $l - $c / 2.0;
-	return sprintf(
-		'#%02X%02X%02X',
-		floor(255.0 * ($r + $m)),
-		floor(255.0 * ($g + $m)),
-		floor(255.0 * ($b + $m))
-	);
 }

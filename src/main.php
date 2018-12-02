@@ -118,21 +118,11 @@ case 'ls-tx':
 	break;
 
 case 'plot-gains':
-	$start = $args['start'] ?? '-2 years';
-	$end = $args['end'] ?? 'now';
-	$abs = $args['absolute'] ?? true;
-	plot_gains($pf, $start, $end, $abs);
+	plot_gains($pf, $args['start'] ?? '-2 years', $args['end'] ?? 'now', $args['absolute'] ?? true);
 	break;
 
-case 'plot-pf':
-	$start = $args['start'] ?? '-1 year';
-	$end = $args['end'] ?? 'now';
-
-	if($args['raw'] ?? false) {
-		tsv_pf($pf, STDOUT, $start, $end);
-	} else {
-		plot_pf($pf, $start, $end, $args['absolute'] ?? true);
-	}
+case 'plot-lines':
+	plot_lines($pf, $args['start'] ?? '-2 years', $args['end'] ?? 'now', $args['absolute'] ?? true, $args['total'] ?? true);
 	break;
 
 case 'get-quote':
@@ -183,7 +173,7 @@ case '--help':
 	fwrite(STDERR, "pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n");
 	fwrite(STDERR, "pfm get-quote ticker:<ticker> [at:<date>]\n");
 	fwrite(STDERR, "pfm plot-gains [start:<date>] [end:<date>] [absolute:1|0]\n");
-	fwrite(STDERR, "pfm plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]\n");
+	fwrite(STDERR, "pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]\n");
 	fwrite(STDERR, "pfm quotes-to-gnucash <file.gnucash>\n");
 	break;
 
