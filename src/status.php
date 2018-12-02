@@ -13,7 +13,7 @@ function status(array &$pf, $date = 'now') {
 		'%Wgt' => [ '%6s', '%6.2f' ],
 		'Price' => [ '%9s', '%9.2f' ],
 		'Quantity' => [ '%12s', '%12.4f' ],
-		'Money In' => [ '%12s', '%12.2f' ],
+		'Basis' => [ '%12s', '%12.2f' ],
 		'Realized' => [ '%12s', '%12.2f' ],
 		'Unrealized' => [ '%12s', '%12.2f' ],
 	];
@@ -62,7 +62,7 @@ function status(array &$pf, $date = 'now') {
 			'%Wgt' => 100.0 * $a['value'] / $totals['value'],
 			'Price' => $a['price'],
 			'Quantity' => $a['qty'],
-			'Money In' => $a['in'] - $a['out'],
+			'Basis' => $a['in'] - $a['out'],
 			'Realized' => colorize_percentage(
 				100.0 * $a['realized'] / $a['value'], '%12.2f',
 				null, null, null, null, $a['realized']
@@ -78,7 +78,7 @@ function status(array &$pf, $date = 'now') {
 
 	print_row($fmt, [
 		'Tkr' => 'TOT',
-		'Money In' => $totals['in'] - $totals['out'],
+		'Basis' => $totals['in'] - $totals['out'],
 		'Realized' => colorize_percentage(
 			100.0 * $totals['realized'] / $totals['in'], '%12.2f',
 			null, null, null, null, $totals['realized']
