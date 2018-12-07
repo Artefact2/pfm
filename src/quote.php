@@ -114,21 +114,71 @@ function get_boursorama_history(string $isin): array {
 			$d = json_decode($r, true);
 
 			foreach($d['d']['QuoteTab'] as $row) {
-				$hist[gmdate('Y-m-d', 86400 * (int)$row['d'])] = (float)$row['l'];
+				$hist[gmdate('Y-m-d', 86400 * (int)$row['d'])] = (float)$row['c'];
 			}
 
 			return $hist;
 		});
 }
 
-function find_in_history(array $hist, int $ts): ?float {
-	for($i = 0; $i < 7; ++$i) {
-		$k = date('Y-m-d', $ts);
-		if(isset($hist[$k])) return $hist[$k];
-		$ts = strtotime('-1 day', $ts);
+function long_div(int $a, int $b) {
+	return [ (int)floor($a / $b), $a % $b ];
+}
+
+function easter(int $year): string {
+	/* https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_P%C3%A2ques */
+	assert($year >= 1583);
+	list(  , $n) = long_div($year, 19);
+	list($c, $u) = long_div($year, 100);
+	list($s, $t) = long_div($c, 4);
+	list($p,   ) = long_div($c+8, 25);
+	list($q,   ) = long_div($c-$p+1, 3);
+	list(  , $e) = long_div(19*$n+$c-$s-$q+15, 30);
+	list($b, $d) = long_div($u, 4);
+	list(  , $L) = long_div(2*$t+2*$b-$e-$d+32, 7);
+	list($h,   ) = long_div($n+11*$e+22*$L, 451);
+	list($m, $j) = long_div($e+$L-7*$h+114, 31);
+
+	assert($m === 3 || $m === 4);
+	return sprintf("%02d-%02d", $m, $j+1);
+}
+
+/* XXX: this depends on the exchange */
+function prev_open_day(int $ts): int {
+	$dow = date('N', $ts);
+
+	if($dow === '7') {
+		$ts -= 86400 * 2;
+	} else if($dow === '6') {
+		$ts -= 86400;
 	}
 
-	return null;
+	/* http://www.swingbourse.com/bourse-jours-feries.php */
+	switch(date('m-d', $ts)) {
+	case '01-01':
+	case '05-01':
+	case '12-24':
+	case '12-25':
+	case '12-26':
+	case '12-31':
+		return prev_open_day($ts - 86400);
+	}
+
+	$easter = sprintf("%04d-%s", $year = (int)date('Y', $ts), easter($year));
+	if(date('Y-m-d', $ts - 86400) === $easter) {
+		/* Easter monday */
+		return $ts - 4 * 86400;
+	} else if(date('Y-m-d', $ts + 2 * 86400) === $easter) {
+		/* Holy friday */
+		return $ts - 86400;
+	}
+
+	return $ts;
+}
+
+function find_in_history(array $hist, int $ts): ?float {
+	$ts = prev_open_day($ts);
+	return $hist[date('Y-m-d', prev_open_day($ts))] ?? null;
 }
 
 function get_quantalys_id(string $isin): int {
