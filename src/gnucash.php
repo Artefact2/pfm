@@ -76,7 +76,7 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 		foreach($hist as $ymd => $q) {
 			if($q === null) continue;
 			$frag->appendXML(sprintf(
-				'<price xmlns:price="http://www.gnucash.org/XML/price" xmlns:cmdty="http://www.gnucash.org/XML/cmdty" xmlns:ts="http://www.gnucash.org/XML/ts"><price:id type="guid">%s</price:id><price:commodity><cmdty:space>%s</cmdty:space><cmdty:id>%s</cmdty:id></price:commodity><price:currency><cmdty:space>CURRENCY</cmdty:space><cmdty:id>%s</cmdty:id></price:currency><price:time><ts:date>%s</ts:date></price:time><price:source>user:price-editor</price:source><price:type>unknown</price:type><price:value>%d/%d</price:value></price>',
+				'<price xmlns:price="http://www.gnucash.org/XML/price" xmlns:cmdty="http://www.gnucash.org/XML/cmdty" xmlns:ts="http://www.gnucash.org/XML/ts"><price:id type="guid">%s</price:id><price:commodity><cmdty:space>%s</cmdty:space><cmdty:id>%s</cmdty:id></price:commodity><price:currency><cmdty:space>CURRENCY</cmdty:space><cmdty:id>%s</cmdty:id></price:currency><price:time><ts:date>%s</ts:date></price:time><price:source>user:price-editor</price:source><price:type>nav</price:type><price:value>%d/%d</price:value></price>',
 				'pfm-'.$ticker.'-'.$ymd,
 				$space,
 				$id,
@@ -89,7 +89,8 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 
 	$xp = new \DOMXPath($d);
 	/* Only remove price entries for things we will replace */
-	$rm = $xp->query('//gnc:pricedb/price/price:id[starts-with(text(),"pfm-")]/..');
+	/* https://github.com/Gnucash/gnucash/blob/master/libgnucash/doc/xml/gnucash-v2.rnc */
+	$rm = $xp->query('//gnc:pricedb/price/price:type[text()="nav"]/..'); /* XXX: nav type doesn't perfectly identify prices added by pfm */
 	for($i = 0; $i < $rm->length; ++$i) {
 		if($rm->item($i)->parentNode === null) continue;
 		$rm->item($i)->parentNode->removeChild($rm->item($i));
