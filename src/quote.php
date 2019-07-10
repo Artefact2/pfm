@@ -38,14 +38,8 @@ function get_quote(array &$pf, string $ticker, string $date = 'now'): ?float {
 	$q = find_in_history($pf['hist'][$ticker] ?? [], $date);
 	if($q !== null) return $q;
 
-	/* XXX: refactor me */
-	$hist = get_quantalys_hist($isin);
-	foreach($hist as $k => $v) {
-		$pf['hist'][$ticker][$k] = $v;
-	}
-	unset($pf['hist'][$ticker][$today]);
-	$q = find_in_history($pf['hist'][$ticker] ?? [], $date);
-	if($q !== null) return $q;
+	fprintf(STDERR, "pfm: could not find quote for %s at date %s\n", $ticker, date('Y-m-d', $date));
+	assert(0);
 }
 
 function get_curl(string $url) {
@@ -179,75 +173,4 @@ function prev_open_day(int $ts): int {
 function find_in_history(array $hist, int $ts): ?float {
 	$ts = prev_open_day($ts);
 	return $hist[date('Y-m-d', prev_open_day($ts))] ?? null;
-}
-
-function get_quantalys_id(string $isin): int {
-	return get_cached_thing('quantalys-id-'.$isin, -31557600, function() use($isin): ?int {
-			$c = get_curl('https://www.quantalys.com/Recherche/RechercheRapide');
-			curl_setopt($c, CURLOPT_POSTFIELDS, [ 'inputSearch' => $isin ]);
-			if(curl_exec($c) === false) return null;
-			$uri = curl_getinfo($c, CURLINFO_EFFECTIVE_URL);
-			if(!preg_match('%^https://www\.quantalys\.com/Fonds/(?<id>[0-9]+)$%', $uri, $m)) return null;
-			return (int)$m['id'];
-		});
-}
-
-function get_quantalys_hist(string $isin): array {
-	return get_cached_thing('quantalys-hist-'.$isin, strtotime('tomorrow'), function() use($isin): array {
-			$id = get_quantalys_id($isin);
-			if($id === null) return [];
-
-			$c = get_curl('https://www.quantalys.com/Fonds/GetDefaultCourbes');
-			curl_setopt($c, CURLOPT_POSTFIELDS, [ 'ID_Produit' => $id ]);
-			$json = curl_exec($c);
-			if($json === false || ($json = json_decode($json, true)) === false) return [];
-			assert($json['list']['Data'][0]['ID'] === $id);
-
-			$c = get_curl('https://www.quantalys.com/Fonds/GetChartHisto_Historique');
-			curl_setopt($c, CURLOPT_POSTFIELDS, [
-				'ID_Produit' => $id,
-				'jsonListeCourbes' => json_encode([
-					[
-						'ID' => $id,
-						'Nom' => urlencode($json['list']['Data'][0]['Nom']),
-						'Type' => 1,
-						'Color' => '#0A50A1',
-						'FinancialItem' => [
-							'ID_Produit' => $id,
-							'cTypeFinancialItem' => 1,
-							'cClasseFinancialItem' => 0,
-							'nModeCalcul' => 1,
-						]
-					]
-				]),
-				'sDtEnd' => $json['dtEnd'],
-				'sDtStart' => $json['dtStart'],
-			]);
-			$json = curl_exec($c);
-			if($json === false || ($json = json_decode($json, true)) === false) return [];
-
-			$c = get_curl('https://www.quantalys.com/Fonds/'.$id);
-			$html = curl_exec($c);
-			if($html === false) return [];
-			if(!preg_match('%<span Class="vl-box-value">\s*(?<vl>[0-9,]+)\s+(?<cur>[A-Z]+)\s*</span>%', $html, $mvl)) return false;
-			if(!preg_match('%<span Class="vl-box-date">\s*(?<date>[0-9/]+)\s*</span>%', $html, $md)) return false;
-
-			$vl = floatval(str_replace(',', '.', $mvl['vl']));
-			$vld = explode('/', $md['date']);
-			$vld = gmdate('Y-m-d', gmmktime(0, 0, 0, (int)$vld[1], (int)$vld[0], (int)$vld[2]));
-
-			$hist = [];
-			$data = json_decode($json['graph'], true)['dataProvider'];
-			foreach($data as $v) {
-				$hist[gmdate('Y-m-d', strtotime($v['x']))] = floatval($v['y_0']);
-			}
-
-			assert(isset($hist[$vld]));
-			$factor = $vl / $hist[$vld];
-			foreach($hist as $k => &$v) {
-				$v = round($factor * $v, 2);
-			}
-
-			return $hist;
-		});
 }
