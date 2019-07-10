@@ -11,11 +11,11 @@ function status(array &$pf, $date = 'now') {
 	static $fmt = [
 		'Tkr' => [ '%5s' ],
 		'%Wgt' => [ '%6s', '%6.2f' ],
-		'Price' => [ '%9s', '%9.2f' ],
-		'Quantity' => [ '%12s', '%12.4f' ],
-		'Basis' => [ '%12s', '%12.2f' ],
-		'Realized' => [ '%12s', '%12.2f' ],
-		'Unrealized' => [ '%12s', '%12.2f' ],
+		'Price' => [ '%10s', '%10.2f' ],
+		'Quantity' => [ '%13s', '%13.4f' ],
+		'Avg price' => [ '%12s', '%12.5f' ],
+		'Exposure' => [ '%11s', '%11.0f' ],
+		'Total P/L' => [ '%11s', '%11.0f' ],
 	];
 
 	print_header($fmt);
@@ -52,7 +52,7 @@ function status(array &$pf, $date = 'now') {
 		if(!$a['qty']) {
 			print_row($fmt, [
 				'Tkr' => (string)$tkr,
-				'Realized' => colorize_percentage(0, '%12.2f', null, null, null, null, $a['realized']),
+				'Total P/L' => colorize_percentage(0, $fmt['Total P/L'][1], null, null, null, null, $a['realized']),
 			]);
 			continue;
 		}
@@ -62,14 +62,13 @@ function status(array &$pf, $date = 'now') {
 			'%Wgt' => 100.0 * $a['value'] / $totals['value'],
 			'Price' => $a['price'],
 			'Quantity' => $a['qty'],
-			'Basis' => $a['in'] - $a['out'],
-			'Realized' => colorize_percentage(
-				100.0 * $a['realized'] / $a['value'], '%12.2f',
-				null, null, null, null, $a['realized']
-			),
-			'Unrealized' => colorize_percentage(
-				100.0 * $a['unrealized'] / $a['value'], '%12.2f',
-				null, null, null, null, $a['unrealized']
+			'Avg price' => ($a['in'] - $a['out']) / $a['qty'],
+			'Exposure' => colorize_percentage(0, $fmt['Exposure'][1], null, null, null, null, $a['value']),
+			'Total P/L' => colorize_percentage(
+				100.0 * ($a['realized'] + $a['unrealized']) / $a['value'],
+				$fmt['Total P/L'][1],
+				null, null, null, null,
+				$a['realized'] + $a['unrealized']
 			),
 		]);
 	}
@@ -78,59 +77,79 @@ function status(array &$pf, $date = 'now') {
 
 	print_row($fmt, [
 		'Tkr' => 'TOT',
-		'Basis' => $totals['in'] - $totals['out'],
-		'Realized' => colorize_percentage(
-			100.0 * $totals['realized'] / $totals['in'], '%12.2f',
-			null, null, null, null, $totals['realized']
+		'Exposure' => colorize_percentage(
+			0, $fmt['Exposure'][1],
+			null, null, null, null,
+			$totals['value']
 		),
-		'Unrealized' => colorize_percentage(
-			100.0 * $totals['unrealized'] / $totals['in'], '%12.2f',
-			null, null, null, null, $totals['unrealized']
+		'Total P/L' => colorize_percentage(
+			100.0 * ($totals['realized'] + $totals['unrealized']) / $totals['value'],
+			$fmt['Total P/L'][1],
+			null, null, null, null,
+			$totals['realized'] + $totals['unrealized']
 		),
 	]);
 }
 
-function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
+function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $rows = 'all') {
 	$ts = maybe_strtotime($date);
 
 	$fmt = [
 		'Ticker' => [ '%8s' ],
 	];
 
+	if($type === 'irr') {
+		$fcolfmt = [ '%7s', '%7.2f' ];
+		$colfmt = [ '%5s', '%5.1f' ];
+		$extracols = 9;
+	} else {
+		assert($type === 'pnl');
+		$fcolfmt = $colfmt = [ '%10s', '%10.0f' ];
+		$extracols = 5;
+	}
+
 	switch($columns) {
 
 	case 'default':
 		$startday = strtotime('yesterday', $ts);
 		$periods[] = [
-			'Day', $startday, $ts, '%7.2f', '%7s'
+			'Day', $startday, $ts, $fcolfmt[1], $fcolfmt[0]
 		];
 
 		$periods[] = [
-			'WtD', strtotime('last sunday', $ts), $ts, '%5.1f', '%5s'
+			'WtD', strtotime('last sunday', $ts), $ts, $colfmt[1], $colfmt[0]
 		];
 
 		$startmonth = strtotime('last day of last month', $ts);
 		$periods[] = [
-			'MtD', $startmonth, $ts, '%5.1f', '%5s'
+			'MtD', $startmonth, $ts, $colfmt[1], $colfmt[0]
 		];
 
 		$startyear = strtotime('-1 year', strtotime(date('Y-12-31', $ts)));
 		$periods[] = [
-			'YtD', $startyear, $ts, '%5.1f', '%5s'
+			'YtD', $startyear, $ts, $colfmt[1], $colfmt[0]
 		];
 
-		for($i = 0; $i < 3; ++$i) {
+		if($extracols - 3 >= 4) {
+			$nmonths = floor(($extracols - 3) / 2);
+			$nyears = ceil(($extracols - 3) / 2);
+		} else {
+			$nmonths = 0;
+			$nyears = $extracols - 3;
+		}
+
+		for($i = 0; $i < $nmonths; ++$i) {
 			$prevmonth = strtotime('last day of last month', $startmonth);
 			$periods[] = [
-				date('M', $startmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
+				date('M', $startmonth), $prevmonth, $startmonth, $colfmt[1], $colfmt[0]
 			];
 			$startmonth = $prevmonth;
 		}
 
-		for($i = 0; $i < 3; ++$i) {
+		for($i = 0; $i < $nyears; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
-				date('Y', $startyear), $prevyear, $startyear, '%5.1f', '%5s'
+				date('Y', $startyear), $prevyear, $startyear, $colfmt[1], $colfmt[0]
 			];
 			$startyear = $prevyear;
 		}
@@ -139,16 +158,16 @@ function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	case 'days':
 		$start = strtotime('yesterday', $ts);
 		$periods[] = [
-			date('W-N', $ts), $start, $ts, '%7.2f', '%7s'
+			date('W-N', $ts), $start, $ts, $fcolfmt[1], $fcolfmt[0]
 		];
 
-		for($i = 0; $i < 9; ++$i) {
+		for($i = 0; $i < $extracols; ++$i) {
 			$prev = strtotime('yesterday', $start);
 			if(in_array(date('N', $start), [ '6', '7' ], true)) {
 				--$i;
 			} else {
 				$periods[] = [
-					date('W-N', $start), $prev, $start, '%5.1f', '%5s'
+					date('W-N', $start), $prev, $start, $colfmt[1], $colfmt[0]
 				];
 			}
 			$start = $prev;
@@ -158,13 +177,13 @@ function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	case 'weeks':
 		$start = strtotime(date('Y-m-d', strtotime('last Sunday', $ts)));
 		$periods[] = [
-			'WtD', $start, $ts, '%7.2f', '%7s'
+			'WtD', $start, $ts, $fcolfmt[1], $fcolfmt[0]
 		];
 
-		for($i = 0; $i < 9; ++$i) {
+		for($i = 0; $i < $extracols; ++$i) {
 			$prev = strtotime('last Sunday', $start);
 			$periods[] = [
-				date('\WW', $start), $prev, $start, '%5.1f', '%5s'
+				date('\WW', $start), $prev, $start, $colfmt[1], $colfmt[0]
 			];
 			$start = $prev;
 		}
@@ -173,13 +192,13 @@ function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	case 'months':
 		$startmonth = strtotime('last day of last month', $ts);
 		$periods[] = [
-			'MtD', $startmonth, $ts, '%7.2f', '%7s'
+			'MtD', $startmonth, $ts, $fcolfmt[1], $fcolfmt[0]
 		];
 
-		for($i = 0; $i < 9; ++$i) {
+		for($i = 0; $i < $extracols; ++$i) {
 			$prevmonth = strtotime('last day of last month', $startmonth);
 			$periods[] = [
-				date('M', $startmonth), $prevmonth, $startmonth, '%5.1f', '%5s'
+				date('M', $startmonth), $prevmonth, $startmonth, $colfmt[1], $colfmt[0]
 			];
 			$startmonth = $prevmonth;
 		}
@@ -188,13 +207,13 @@ function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	case 'years':
 		$startyear = strtotime('-1 year', strtotime(date('Y-12-31', $ts)));
 		$periods[] = [
-			'YtD', $startyear, $ts, '%7.2f', '%7s'
+			'YtD', $startyear, $ts, $fcolfmt[1], $fcolfmt[0]
 		];
 
-		for($i = 0; $i < 9; ++$i) {
+		for($i = 0; $i < $extracols; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
-				date('Y', $prevyear), $prevyear, $startyear, '%5.1f', '%5s'
+				date('Y', $prevyear), $prevyear, $startyear, $colfmt[1], $colfmt[0]
 			];
 			$startyear = $prevyear;
 		}
@@ -219,17 +238,56 @@ function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	$ftotal = [ 'Ticker' => 'TOT' ];
 
 	foreach($periods as $i => $p) {
-		list($k, $start, $end) = $p;
+		list($k, $start, $end, $valfmt) = $p;
 
-		$irra = irr($pf, $start, $end);
+		if($type === 'irr') {
+			foreach(irr($pf, $start, $end) as $tkr => $irr) {
+				$pc = colorize_percentage(100.0 * ($irr - 1.0), $valfmt);
 
-		foreach($irra as $tkr => $irr) {
-			$pc = colorize_percentage(100.0 * ($irr - 1.0), $i === 0 ? '%7.2f' : '%5.1f');
+				if($tkr === '__total__') {
+					$ftotal[$k] = $pc;
+				} else {
+					$ftable[$tkr][$k] = $pc;
+				}
+			}
+		} else {
+			$iteratorLast = function(\Traversable $i) {
+				foreach($i as $val);
+				return $val;
+			};
 
-			if($tkr === '__total__') {
-				$ftotal[$k] = $pc;
-			} else {
-				$ftable[$tkr][$k] = $pc;
+			$agg = $iteratorLast(iterate_time($pf, $start, $end, '+'.($end - $start).' seconds'));
+			$totalpl = 0;
+			$totalbasis = 0;
+
+			foreach($agg['agg'] as $tkr => $a) {
+				if($a['qty'] < 1e-5 && !isset($agg['delta'][$tkr])) continue;
+				$delta = $agg['delta'][$tkr] ?? [ 'realized' => 0, 'qty' => 0, 'in' => 0, 'out' => 0 ];
+
+				$pl = $delta['realized'];
+				if($a['qty'] > 1e-5) {
+					$pl += get_quote($pf, $tkr, $end) * $a['qty'] - ($a['in'] - $a['out']);
+				} else assert($a['in'] - $a['out'] < 1e-5);
+				if($a['qty'] - $delta['qty'] > 1e-5) {
+					$pl -= (get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']) - ($a['in'] - $delta['in'] - ($a['out'] - $delta['out'])));
+				} else assert($a['in'] - $delta['in'] - ($a['out'] - $delta['out']) < 1e-5);
+
+				$ftable[$tkr][$k] = colorize_percentage(
+					($a['in'] - $a['out']) > 1e-5 ? (100.0 * $pl / ($a['in'] - $a['out'])) : 1.0,
+					$valfmt,
+					null, null, null, null, $pl
+				);
+
+				$totalpl += $pl;
+				$totalbasis += $a['in'] - $a['out'];
+			}
+
+			if($totalpl !== 0) {
+				$ftotal[$k] = colorize_percentage(
+					$totalbasis > 0 ? (100.0 * $totalpl / $totalbasis) : 1.0,
+					$valfmt,
+					null, null, null, null, $totalpl
+				);
 			}
 		}
 	}
