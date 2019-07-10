@@ -41,7 +41,7 @@ case 's':
 
 case 'perf':
 case 'p':
-	perf($pf, $args['at'] ?? 'now', $args['columns'] ?? 'default');
+	perf($pf, $args['at'] ?? 'now', $args['columns'] ?? 'default', $args['rows'] ?? 'open');
 	break;
 
 case 'add-line':
@@ -163,7 +163,7 @@ case '--help':
 	fwrite(STDERR, "pfm [version]\n");
 	fwrite(STDERR, "pfm help|h\n");
 	fwrite(STDERR, "pfm status|s [at:<date>]\n");
-	fwrite(STDERR, "pfm perf|p [at:<date>] [columns:default|days|weeks|months|years]\n");
+	fwrite(STDERR, "pfm perf|p [at:<date>] [columns:default|days|weeks|months|years] [rows:all|open|ticker1,ticker2…]\n");
 	fwrite(STDERR, "pfm add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>\n");
 	fwrite(STDERR, "pfm rm-line ticker:<ticker>\n");
 	fwrite(STDERR, "pfm edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…\n");

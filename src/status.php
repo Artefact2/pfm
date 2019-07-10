@@ -90,7 +90,7 @@ function status(array &$pf, $date = 'now') {
 	]);
 }
 
-function perf(array &$pf, $date = 'now', $columns = 'default') {
+function perf(array &$pf, $date = 'now', $columns = 'default', $rows = 'all') {
 	$ts = maybe_strtotime($date);
 
 	$fmt = [
@@ -234,9 +234,14 @@ function perf(array &$pf, $date = 'now', $columns = 'default') {
 		}
 	}
 
+	$agg = aggregate_tx($pf, [ 'before' => $date ]);
 	foreach($ftable as $ticker => $row) {
-		$row['Ticker'] = (string)$ticker;
-		print_row($fmt, $row);
+		if($rows === 'all'
+		   || ($rows === 'open' && $agg[$ticker]['qty'] > 0)
+		   || preg_match('%(^|,)'.preg_quote($ticker, '%').'(,|$)%', $rows)) {
+			$row['Ticker'] = (string)$ticker;
+			print_row($fmt, $row);
+		}
 	}
 
 	print_sep($fmt);
