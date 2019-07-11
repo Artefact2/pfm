@@ -6,7 +6,7 @@ Released under the WTFPLv2 license.
 
 # Demo
 
-[![asciicast](https://asciinema.org/a/XYRN7O4hZe9nSgYFipeQ56tLe.svg)](https://asciinema.org/a/XYRN7O4hZe9nSgYFipeQ56tLe)
+[![asciicast](https://asciinema.org/a/s75fcKuiVPxxtfFV7K6bqN66h.svg)](https://asciinema.org/a/s75fcKuiVPxxtfFV7K6bqN66h)
 
 # Dependencies
 
