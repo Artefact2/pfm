@@ -31,14 +31,13 @@ function rm_tx(array &$pf, array $txids) {
 
 function ls_tx(array &$pf, array $filters = []) {
 	static $fmt = [
-		'TxID' => [ '%6s' ],
+		'TxID' => [ '%5s' ],
 		'Tkr' => [ '%5s' ],
 		'Date' => [ '%11s' ],
-		'Act' => [ '%5s' ],
 		'Price' => [ '%11s', '%11.4f' ],
-		'Quantity' => [ '%11s', '%11.4f' ],
-		'Fee' => [ '%8s', '%8.2f' ],
-		'Total' => [ '%9s', '%9.0f' ],
+		'Quantity' => [ '%12s', '%12.4f' ],
+		'Fee' => [ '%10s', '%10.2f' ],
+		'Total' => [ '%14s', '%14.2f' ],
 	];
 
 	print_header($fmt);
@@ -57,9 +56,8 @@ function ls_tx(array &$pf, array $filters = []) {
 			'TxID' => (string)$k,
 			'Tkr' => $tx['ticker'],
 			'Date' => date('Y-m-d', $tx['ts']),
-			'Act' => $tx['buy'] > 0 ? 'Buy' : 'Sell',
 			'Price' => (float)$tx['price'],
-			'Quantity' => abs($tx['buy']),
+			'Quantity' => $tx['buy'],
 			'Fee' => (float)$tx['fee'],
 			'Total' => -$tx['price']*$tx['buy'] - $tx['fee'],
 		]);
