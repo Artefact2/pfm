@@ -7,7 +7,7 @@
  * License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details. */
 
-function tsv_gains(array $pf, $stream, $start, $end) {
+function tsv_gains(array &$pf, $stream, $start, $end) {
 	$start = strtotime(date('Y-m-d', maybe_strtotime($start)));
 	$end = strtotime(date('Y-m-d', maybe_strtotime($end)));
 
@@ -28,7 +28,7 @@ function tsv_gains(array $pf, $stream, $start, $end) {
 	}
 }
 
-function plot_gains(array $pf, $start, $end, $absolute = true) {
+function plot_gains(array &$pf, $start, $end, $absolute = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
 	tsv_gains($pf, $datf = fopen($dat, 'wb'), $start, $end, $absolute);
 	fclose($datf);
@@ -60,7 +60,7 @@ function plot_gains(array $pf, $start, $end, $absolute = true) {
 	unlink($dat);
 }
 
-function tsv_lines(array $pf, $out, $start, $end, &$used = null) {
+function tsv_lines(array &$pf, $out, $start, $end, &$used = null) {
 	$used = [];
 
 	fwrite($out, "Timestamp");
@@ -89,7 +89,7 @@ function tsv_lines(array $pf, $out, $start, $end, &$used = null) {
 	}
 }
 
-function plot_lines(array $pf, $start, $end, $absolute = true, $total = true) {
+function plot_lines(array &$pf, $start, $end, $absolute = true, $total = true) {
 	$dat = tempnam(sys_get_temp_dir(), 'pfm');
 	tsv_lines($pf, $datf = fopen($dat, 'wb'), $start, $end, $used);
 	fclose($datf);
