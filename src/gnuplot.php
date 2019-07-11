@@ -52,7 +52,7 @@ function plot_gains(array &$pf, $start, $end, $absolute = true) {
 		$dat,
 		$absolute ? "column('Basis')" : "100.0",
 		$absolute ? "column('Realized')" : "100.0 * column('Realized') / column('Basis')",
-		$absolute ? "column('Unrealized')" : "100.0 * column('Unrealized') / column('Basis')"
+		$absolute ? "column('Unrealized') + column('Basis')" : "100.0 + 100.0 * column('Unrealized') / column('Basis')"
 	);
 
 	fwrite($sf, "\n");
