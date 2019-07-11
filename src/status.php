@@ -276,7 +276,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 				} else assert($a['in'] - $delta['in'] - ($a['out'] - $delta['out']) < 1e-5);
 
 				$ftable[$tkr][$k] = colorize_percentage(
-					($a['in'] - $a['out']) > 1e-5 ? (100.0 * $pl / ($a['in'] - $a['out'])) : 1.0,
+					($a['in'] - $a['out']) > 1e-5 ? (100.0 * $pl / ($a['in'] - $a['out'])) : 0.0,
 					$valfmt,
 					null, null, null, null, $pl
 				);
@@ -288,7 +288,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 			if($totalpl !== 0) {
 				$ftotal[$k] = colorize_percentage(
-					$totalbasis > 0 ? (100.0 * $totalpl / $totalbasis) : 1.0,
+					$totalbasis > 0 ? (100.0 * $totalpl / $totalbasis) : 0.0,
 					$valfmt,
 					null, null, null, null, $totalpl
 				);
