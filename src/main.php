@@ -144,6 +144,30 @@ case 'quotes-to-gnucash':
 	save_gnucash($args[0], $d);
 	break;
 
+case 'prune-history':
+	$from = maybe_strtotime($args['from'] ?? 0);
+	$to = maybe_strtotime($args['to'] ?? PHP_INT_MAX);
+	$tickers = explode(',', $args['tickers'] ?? '');
+	if($tickers === [ '' ]) $tickers = array_keys($pf['lines']);
+	$except = array_flip(explode(',', $args['except'] ?? ''));
+	$pruned = 0;
+
+	foreach($tickers as $ticker) {
+		if(isset($except[$ticker])) continue;
+		if(!isset($pf['hist'][$ticker])) continue;
+
+		foreach($pf['hist'][$ticker] as $k => $v) {
+			$ts = strtotime($k);
+			if($ts >= $from && $ts <= $to) {
+				unset($pf['hist'][$ticker][$k]);
+				++$pruned;
+			}
+		}
+	}
+
+	notice("Done, pruned %d entries from history\n", $pruned);
+	break;
+
 case 'version':
 case '-v':
 case '--version':
@@ -175,6 +199,7 @@ case '--help':
 	fwrite(STDERR, "pfm plot-gains [start:<date>] [end:<date>] [absolute:1|0]\n");
 	fwrite(STDERR, "pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]\n");
 	fwrite(STDERR, "pfm quotes-to-gnucash <file.gnucash>\n");
+	fwrite(STDERR, "pfm prune-history [tickers:<ticker>,…] [except:<ticker>,…] [from:<date>] [to:<date>]\n");
 	break;
 
 default:
