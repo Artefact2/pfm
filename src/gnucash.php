@@ -68,10 +68,15 @@ function insert_gnucash_quotes(array &$pf, \DOMDocument $d): void {
 
 	$frag = $d->createDocumentFragment();
 	$today = date('Y-m-d', time());
+	$agg = aggregate_tx($pf);
+
 	/* XXX: not optimal at all */
 	foreach($commodities as $ticker => list($space, $id)) {
 		$hist = $pf['hist'][$ticker] ?? [];
-		$hist[$today] = get_quote($pf, $ticker);
+
+		if($agg[$ticker]['qty'] > 1e-5) {
+			$hist[$today] = get_quote($pf, $ticker);
+		}
 
 		foreach($hist as $ymd => $q) {
 			if($q === null) continue;
