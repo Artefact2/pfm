@@ -29,7 +29,7 @@ Available commands:
 pfm [version]
 pfm help|h
 pfm status|s [at:<date>]
-pfm perf|p [at:<date>] [columns:default|days|weeks|months|years]
+pfm perf|p [type:irr|pnl] [at:<date>] [columns:default|days|weeks|months|years] [rows:all|open|ticker1,ticker2…] [sort:perf|weight|ticker]
 pfm add-line name:<name> ticker:<ticker> currency:<currency> isin:<ISIN>
 pfm rm-line ticker:<ticker>
 pfm edit-line ticker:<ticker> [<field1>:<newval1>] [<field2>:<newval2>]…
@@ -38,8 +38,8 @@ pfm add-tx ticker:<ticker> [sell:<quantity>|all] [buy:<quantity>] [price:<unit-p
 pfm rm-tx <txid>...
 pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]
 pfm get-quote ticker:<ticker> [at:<date>]
-pfm plot-perf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]
-pfm plot-pf [start:<date>] [end:<date>] [absolute:0|1] [raw:0|1]
+pfm plot-gains [start:<date>] [end:<date>] [absolute:1|0]
+pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]
 pfm quotes-to-gnucash <file.gnucash>
 ~~~
 

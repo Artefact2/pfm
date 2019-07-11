@@ -91,7 +91,7 @@ function status(array &$pf, $date = 'now') {
 	]);
 }
 
-function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $rows = 'all') {
+function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $rows = 'all', $sort = 'perf') {
 	$ts = maybe_strtotime($date);
 
 	$fmt = [
@@ -102,10 +102,11 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 		$fcolfmt = [ '%7s', '%7.2f' ];
 		$colfmt = [ '%5s', '%5.1f' ];
 		$extracols = 9;
-	} else {
-		assert($type === 'pnl');
+	} else if($type === 'pnl') {
 		$fcolfmt = $colfmt = [ '%10s', '%10.0f' ];
 		$extracols = 5;
+	} else {
+		fatal("invalid value for type, expected irr or pnl\n");
 	}
 
 	switch($columns) {
@@ -236,6 +237,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 	$ftable = [];
 	$ftotal = [ 'Ticker' => 'TOT' ];
+	$sortdata = [];
 
 	foreach($periods as $i => $p) {
 		list($k, $start, $end, $valfmt) = $p;
@@ -248,6 +250,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 					$ftotal[$k] = $pc;
 				} else {
 					$ftable[$tkr][$k] = $pc;
+					$sortdata[$tkr][$k] = $irr;
 				}
 			}
 		} else {
@@ -277,6 +280,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 					$valfmt,
 					null, null, null, null, $pl
 				);
+				$sortdata[$tkr][$k] = $pl;
 
 				$totalpl += $pl;
 				$totalbasis += $a['in'] - $a['out'];
@@ -293,6 +297,34 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 	}
 
 	$agg = aggregate_tx($pf, [ 'before' => $date ]);
+
+	if($sort === 'perf') {
+		uksort($ftable, function($t1, $t2) use($sortdata) {
+			foreach($sortdata[$t1] as $k => $v1) {
+				if(!isset($sortdata[$t2][$k])) {
+					return -1;
+				}+
+					 $v2 = $sortdata[$t2][$k];
+				if($v1 - $v2 > 0.001) return -1;
+				if($v2 - $v1 > 0.001) return 1;
+			}
+
+			return strcmp($t1, $t2);
+		});
+	} else if($sort === 'weight') {
+		uksort($ftable, function($t1, $t2) use($pf, $date, $agg) {
+			$q1 = isset($agg[$t1]) ? $agg[$t1]['qty'] : 0;
+			$q2 = isset($agg[$t2]) ? $agg[$t2]['qty'] : 0;
+			if($q1 < 1e-5) return 1;
+			if($q2 < 1e-5) return -1;
+			return get_quote($pf, $t2, $date) * $q2 - get_quote($pf, $t1, $date) * $q1;
+		});
+	} else if($sort === 'ticker') {
+		ksort($ftable);
+	} else {
+		fatal("invalid value for sort, expected perf, weight or ticker\n");
+	}
+
 	foreach($ftable as $ticker => $row) {
 		if($rows === 'all'
 		   || ($rows === 'open' && $agg[$ticker]['qty'] > 0)
