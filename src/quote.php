@@ -28,22 +28,30 @@ function get_quote(array &$pf, string $ticker, string $date = 'now'): float {
 		fatal("could not find intraday quote for %s\n", $ticker);
 	}
 
-	/* XXX: refactorable? */
 	$q = find_in_history($pf['hist'][$ticker] ?? [], $date);
 	if($q !== null) return $q;
 
-	$brsh = get_boursorama_history($isin);
-	$bdh = get_bd_history($isin);
+	/* XXX */
+	//$brsh = get_boursorama_history($isin);
+	$bdh = get_bd_history($isin, $ticker, $pf['lines'][$ticker]['currency']);
 
 	$pf['hist'][$ticker] = merge_histories(
 		$ticker,
 		$pf['hist'][$ticker],
-		merge_histories($ticker, $bdh, $brsh)
+		$bdh
+		//merge_histories($ticker, $bdh, $brsh)
 	);
 
 	unset($pf['hist'][$ticker][$today]);
 	$q = find_in_history($pf['hist'][$ticker] ?? [], $date);
 	if($q !== null) return $q;
+
+	/* XXX */
+	$ydate = $date;
+	for($i = 0; $i < 2; ++$i) {
+		$q = find_in_history($pf['hist'][$ticker] ?? [], $ydate = prev_open_day(strtotime('-1 day', $ydate)));
+		if($q !== null) return $q;
+	}
 
 	fatal("could not find quote for %s at date %s\n", $ticker, date('Y-m-d', $date));
 }
@@ -121,24 +129,28 @@ function get_boursorama_history(string $isin): array {
 		});
 }
 
-function get_bd_id(string $isin): ?string {
-	return get_cached_thing('bd-id-'.$isin, -31557600, function() use($isin): ?string {
-		$c = get_curl('https://www.boursedirect.fr/api/search/'.$isin.'/lucky');
+function get_bd_id(string $isin, string $ticker, string $currency): ?array {
+	return get_cached_thing('bd-id-'.$isin, -31557600, function() use($isin, $ticker, $currency): ?array {
+		$c = get_curl('https://www.boursedirect.fr/api/search/'.$isin);
 		fwrite(STDOUT, '.');
-		curl_exec($c);
-		$loc = curl_getinfo($c, CURLINFO_EFFECTIVE_URL);
-		if(!preg_match('%/seance$%', $loc)) return null;
-		return substr($loc, 0, -strlen('/seance'));
+		curl_setopt($c, CURLOPT_HTTPHEADER, [
+			'X-Requested-With: XMLHttpRequest',
+		]);
+		$d = json_decode(curl_exec($c), true);
+		foreach($d['instruments']['data'] as $inst) {
+			if($inst['currency']['code'] === $currency && $inst['isin'] === $isin && $inst['mnemo'] === $ticker) {
+				return [ $inst['mnemo'], $inst['currency']['code'], $inst['market']['mic'] ];
+			}
+		}
+		return null;
 	});
 }
 
-function get_bd_history(string $isin): array {
-	return get_cached_thing('bd-hist-'.$isin, strtotime('tomorrow'), function() use($isin): array {
-			$loc = get_bd_id($isin);
-			if($loc === null) return [];
-			if(!preg_match('%-(?<ticker>[^-]+)-(?<currency>[^-]+)-(?<exchange>[^-]+)$%U', $loc, $m)) return [];
-
-			$c = get_curl('https://www.boursedirect.fr/api/instrument/download/history/'.$m['exchange'].'/'.$m['ticker'].'/'.$m['currency']);
+function get_bd_history(string $isin, string $ticker, string $currency): array {
+	return get_cached_thing('bd-hist-'.$isin, strtotime('tomorrow'), function() use($isin, $ticker, $currency): array {
+			$id = get_bd_id($isin, $ticker, $currency);
+			if($id === null) return [];
+			$c = get_curl('https://www.boursedirect.fr/api/instrument/download/history/'.$id[2].'/'.$id[0].'/'.$id[1]);
 			fwrite(STDOUT, '.');
 			$csv = curl_exec($c);
 			$csv = explode("\n", trim($csv));
@@ -219,6 +231,8 @@ function find_in_history(array $hist, int $ts): ?float {
 function fix_splits(string $isin, array &$h): void {
 	$prev = null;
 	foreach($h as $k => $v) {
+		if(!$v) continue;
+
 		if($prev === null) {
 			$prev = $v;
 			continue;
@@ -253,9 +267,7 @@ function merge_histories(string $ticker, array $h1, array $h2): array {
 	foreach($h as $k => $v) {
 		if(!isset($h1[$k]) || !isset($h2[$k])) continue;
 		$delta = abs(($h2[$k] - $h1[$k]) / $h1[$k]);
-		if($delta > 0.3) {
-			fatal("definite history mismatch for %s at %s: %.4f ≠ %.4f\n", $ticker, $k, $h1[$k], $h2[$k]);
-		} else if($delta > 0.001) {
+		if($delta > 0.001) {
 			notice("possible history mismatch for %s at %s: %.4f ≠ %.4f\n", $ticker, $k, $h1[$k], $h2[$k]);
 		}
 	}
