@@ -305,8 +305,8 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 					return -1;
 				}+
 					 $v2 = $sortdata[$t2][$k];
-				if($v1 - $v2 > 0.001) return -1;
-				if($v2 - $v1 > 0.001) return 1;
+				if($v1 - $v2 > 0) return -1;
+				else if($v2 - $v1 > 0) return 1;
 			}
 
 			return strcmp($t1, $t2);
