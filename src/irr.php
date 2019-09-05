@@ -34,7 +34,7 @@ function irr(array &$pf, $start, $end) {
 				$ts === $start ? $tval : -$tval,
 			];
 
-			continue;
+			if($ts === $start) continue;
 		}
 
 		$tdnav = 0;
