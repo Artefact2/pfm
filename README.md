@@ -39,8 +39,10 @@ pfm rm-tx <txid>...
 pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]
 pfm get-quote ticker:<ticker> [at:<date>]
 pfm plot-gains [start:<date>] [end:<date>] [absolute:1|0]
-pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]
+pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [lines:all|none|ticker1,ticker2,…] [total:1|0] [benchmark:1|0]
 pfm quotes-to-gnucash <file.gnucash>
+pfm prune-history [tickers:<ticker>,…] [except:<ticker>,…] [from:<date>] [to:<date>]
+pfm set-benchmark [<ticker1>:<weight1>] [<ticker2>:<weight2>] …
 ~~~
 
 # About transactions
