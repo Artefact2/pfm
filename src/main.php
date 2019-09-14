@@ -168,6 +168,25 @@ case 'prune-history':
 	notice("Done, pruned %d entries from history\n", $pruned);
 	break;
 
+case 'set-benchmark':
+	foreach($args as $ticker => &$weight) {
+		$s = 0.0;
+		if(!isset($pf['lines'][$ticker])) {
+			fatal("Unknown ticker %s\n", $ticker);
+		}
+		$weight = floatval($weight);
+		$s += $weight;
+	}
+	if(abs($s - 1.0) >= 0.0001) {
+		notice("Warning: benchmark weights do not add up to 1.0 (have %.4f)\n", $s);
+	}
+	if($args !== []) {
+		$pf['benchmark'] = $args;
+	} else {
+		unset($pf['benchmark']);
+	}
+	break;
+
 case 'version':
 case '-v':
 case '--version':
@@ -200,6 +219,7 @@ case '--help':
 	fwrite(STDERR, "pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]\n");
 	fwrite(STDERR, "pfm quotes-to-gnucash <file.gnucash>\n");
 	fwrite(STDERR, "pfm prune-history [tickers:<ticker>,…] [except:<ticker>,…] [from:<date>] [to:<date>]\n");
+	fwrite(STDERR, "pfm set-benchmark [<ticker1>:<weight1>] [<ticker2>:<weight2>] …\n");
 	break;
 
 default:
