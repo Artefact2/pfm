@@ -40,8 +40,19 @@ function load_pf($path) {
 
 /* Save a portfolio. */
 function save_pf(array $pf, string $path): void {
-	$r = file_put_contents($path, json_encode($pf, JSON_PRETTY_PRINT));
-	if($r === false) fatal("Could not save portfolio at %s\n", $path);
+	/* See: https://www.slideshare.net/nan1nan1/eat-my-data */
+
+	$f = fopen($tpath = $path.'.tmp', 'wb');
+	if($f === false) fatal("Could not open file %s\n", $tpath);
+
+	$r = fputs($f, $json = json_encode($pf, JSON_PRETTY_PRINT)) === strlen($json);
+	if($r !== false) $r = fflush($f);
+	if($r !== false) $r = fclose($f);
+	if($r === false) fatal("Could not write to file %s\n");
+
+	shell_exec('sync -d '.escapeshellarg($tpath)); /* XXX: no way to do it in native PHP */
+
+	if(rename($tpath, $path) === false) fatal("Could not save to file %s\n", $path);
 }
 
 /* Get the default portfolio path. Can be overridden with
