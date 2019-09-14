@@ -214,7 +214,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 		for($i = 0; $i < $extracols; ++$i) {
 			$prevyear = strtotime('-1 year', $startyear);
 			$periods[] = [
-				date('Y', $prevyear), $prevyear, $startyear, $colfmt[1], $colfmt[0]
+				date('Y', $prevyear + 86400), $prevyear, $startyear, $colfmt[1], $colfmt[0]
 			];
 			$startyear = $prevyear;
 		}
