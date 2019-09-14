@@ -237,6 +237,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 	$ftable = [];
 	$ftotal = [ 'Ticker' => 'TOT' ];
+	$fbench = [ 'Ticker' => 'BNCH' ];
 	$sortdata = [];
 
 	foreach($periods as $i => $p) {
@@ -248,6 +249,8 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 				if($tkr === '__total__') {
 					$ftotal[$k] = $pc;
+				} else if($tkr === '__bench__') {
+					$fbench[$k] = $pc;
 				} else {
 					$ftable[$tkr][$k] = $pc;
 					$sortdata[$tkr][$k] = $irr;
@@ -336,4 +339,9 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 	print_sep($fmt);
 	print_row($fmt, $ftotal);
+
+	if($pf['benchmark'] ?? [] !== []) {
+		print_sep($fmt);
+		print_row($fmt, $fbench);
+	}
 }
