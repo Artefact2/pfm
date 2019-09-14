@@ -90,21 +90,25 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 	];
 
 	$agg = [];
+	$bagg = [];
 	$totals = $blank;
+	$btotals = $blank;
 
 	while($start <= $end) {
 		$delta = [];
+		$bdelta = [];
 		$dtotals = $blank;
+		$bdtotals = $blank;
 
 		while($tx !== false && $tx['ts'] <= $start) {
 			$tkr = $tx['ticker'];
 
-			if(!isset($agg[$tkr])) {
-				$agg[$tkr] = $blank;
-			}
+			if(!isset($agg[$tkr])) $agg[$tkr] = $blank;
+			if(!isset($delta[$tkr])) $delta[$tkr] = $blank;
 
-			if(!isset($delta[$tkr])) {
-				$delta[$tkr] = $blank;
+			foreach($pf['benchmark'] ?? [] as $bt => $bw) {
+				if(!isset($bagg[$bt])) $bagg[$bt] = $blank;
+				if(!isset($bdelta[$bt])) $bdelta[$bt] = $blank;
 			}
 
 			if($tx['buy'] > 0) {
@@ -114,6 +118,14 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 				$delta[$tkr]['in'] += $in;
 				$totals['in'] += $in;
 				$dtotals['in'] += $in;
+
+				foreach($pf['benchmark'] ?? [] as $bt => $bw) {
+					/* XXX: will drift over time; compute relative $in based on pf value */
+					$bagg[$bt]['in'] += $bw * $in;
+					$bdelta[$bt]['in'] += $bw * $in;
+					$btotals['in'] += $bw * $in;
+					$bdtotals['in'] += $bw * $in;
+				}
 			} else if($tx['buy'] < 0) {
 				$out = -$tx['buy'] * (($agg[$tkr]['in'] - $agg[$tkr]['out']) / $agg[$tkr]['qty']);
 				$realized = -$tx['buy'] * $tx['price'] - $out;
@@ -127,6 +139,23 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 				$delta[$tkr]['realized'] += $realized;
 				$totals['realized'] += $realized;
 				$dtotals['realized'] += $realized;
+
+				foreach($pf['benchmark'] ?? [] as $bt => $bw) {
+					/* XXX: see comment for $in */
+					$qout = $tx['buy'] * $tx['price'] * $bw / get_quote($pf, $bt, (string)$tx['ts']);
+					$out = -$qout * ($bagg[$bt]['in'] - $bagg[$bt]['out']) / $bagg[$bt]['qty'];
+					$realized = -$tx['buy'] * $tx['price'] * $bw - $out;
+
+					$bagg[$bt]['out'] += $out;
+					$bdelta[$bt]['out'] += $out;
+					$btotals['out'] += $out;
+					$bdtotals['out'] += $out;
+
+					$bagg[$bt]['realized'] += $realized;
+					$bdelta[$bt]['realized'] += $realized;
+					$btotals['realized'] += $realized;
+					$bdtotals['realized'] += $realized;
+				}
 			}
 
 			$agg[$tkr]['qty'] += $tx['buy'];
@@ -139,14 +168,33 @@ function iterate_time(array $pf, $start, $end, $interval = '+1 day') {
 
 			if(abs($agg[$tkr]['qty']) < 1e-6) $agg[$tkr]['qty'] = 0;
 
+			foreach($pf['benchmark'] ?? [] as $bt => $bw) {
+				$bqty = $tx['buy'] * $tx['price'] * $bw / get_quote($pf, $bt, (string)$tx['ts']); /* XXX: intraday precision (hard!) */
+
+				$bagg[$bt]['qty'] += $bqty;
+				$bdelta[$bt]['qty'] += $bqty;
+
+				$bagg[$bt]['realized'] -= $tx['fee'] * $bw;
+				$bdelta[$bt]['realized'] -= $tx['fee'] * $bw;
+				$btotals['realized'] -= $tx['fee'] * $bw;
+				$bdtotals['realized'] -= $tx['fee'] * $bw;
+
+				if(abs($bagg[$bt]['qty']) < 1e-6) $bagg[$bt]['qty'] = 0;
+			}
+
 			$tx = next($txs);
 		}
 
 		yield $start => [
 			'agg' => $agg,
-			'totals' => $totals,
 			'delta' => $delta,
+			'totals' => $totals,
 			'dtotals' => $dtotals,
+
+			'bagg' => $bagg,
+			'bdelta' => $bdelta,
+			'btotals' => $btotals,
+			'bdtotals' => $bdtotals,
 		];
 
 		if($start === $end) return;
