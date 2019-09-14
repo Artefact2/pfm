@@ -266,10 +266,8 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 			$agg = $iteratorLast(iterate_time($pf, $start, $end, '+'.($end - $start).' seconds'));
 			$totalpl = 0;
 			$totalbasis = 0;
-			$totalsval = 0;
 			$benchpl = 0;
 			$benchbasis = 0;
-			$benchsval = 0;
 
 			foreach($agg['agg'] as $tkr => $a) {
 				if($a['qty'] < 1e-5 && !isset($agg['delta'][$tkr])) continue;
@@ -280,7 +278,6 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 					$pl += get_quote($pf, $tkr, $end) * $a['qty'] - ($a['in'] - $a['out']);
 				} else assert($a['in'] - $a['out'] < 1e-5);
 				if($a['qty'] - $delta['qty'] > 1e-5) {
-					$totalsval += get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']);
 					$pl -= (get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']) - ($a['in'] - $delta['in'] - ($a['out'] - $delta['out'])));
 				} else assert($a['in'] - $delta['in'] - ($a['out'] - $delta['out']) < 1e-5);
 
@@ -298,14 +295,13 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 			/* XXX: refactor me */
 			foreach($agg['bagg'] as $tkr => $a) {
 				if($a['qty'] < 1e-5 && !isset($agg['delta'][$tkr])) continue;
-				$delta = $agg['delta'][$tkr] ?? [ 'realized' => 0, 'qty' => 0, 'in' => 0, 'out' => 0 ];
+				$delta = $agg['bdelta'][$tkr] ?? [ 'realized' => 0, 'qty' => 0, 'in' => 0, 'out' => 0 ];
 
 				$pl = $delta['realized'];
 				if($a['qty'] > 1e-5) {
 					$pl += get_quote($pf, $tkr, $end) * $a['qty'] - ($a['in'] - $a['out']);
 				} else assert($a['in'] - $a['out'] < 1e-5);
 				if($a['qty'] - $delta['qty'] > 1e-5) {
-					$benchsval += get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']);
 					$pl -= (get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']) - ($a['in'] - $delta['in'] - ($a['out'] - $delta['out'])));
 				} else assert($a['in'] - $delta['in'] - ($a['out'] - $delta['out']) < 1e-5);
 
@@ -322,10 +318,6 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 			}
 
 			if($benchpl !== 0) {
-				/* Normalize benchmark pf value at the start of each period for comparable P/L */
-				$drift = $totalsval / $benchsval;
-				$benchpl *= $drift;
-				$benchbasis *= $drift;
 				$fbench[$k] = colorize_percentage(
 					$benchbasis > 0 ? (100.0 * $benchpl / $benchbasis) : 0.0,
 					$valfmt,
