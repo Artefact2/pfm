@@ -11,52 +11,53 @@ function irr(array &$pf, $start, $end) {
 	$start = maybe_strtotime($start);
 	$end = maybe_strtotime($end);
 
-	$flows = [ '__total__' => [] ];
+	$flows = [ '__total__' => [], '__bench__' => [] ];
 
 	foreach(iterate_time($pf, $start, $end) as $ts => $data) {
 		$t = ($ts - $start) / ($end - $start);
 
 		if($ts === $start || $ts === $end) {
-			$tval = 0.0;
-
 			foreach($data['agg'] as $ticker => $tdata) {
 				if(!$tdata['qty']) continue;
 
-				$tval += $val = $tdata['qty'] * get_quote($pf, $ticker, $ts);
-				$flows[$ticker][] = [
-					$t,
-					$ts === $start ? $val : -$val,
-				];
+				$val = $tdata['qty'] * get_quote($pf, $ticker, $ts);
+				$flow = [ $t, $ts === $start ? $val : -$val ];
+				$flows[$ticker][] = $flow;
+				$flows['__total__'][] = $flow;
 			}
 
-			$flows['__total__'][] = [
-				$t,
-				$ts === $start ? $tval : -$tval,
-			];
+			foreach($data['bagg'] as $ticker => $tdata) {
+				if(!$tdata['qty']) continue;
+
+				$val = $tdata['qty'] * get_quote($pf, $ticker, $ts);
+				$flows['__bench__'][] = [ $t, $ts === $start ? $val : -$val ];
+			}
 
 			if($ts === $start) continue;
 		}
 
-		$tdnav = 0;
-
 		foreach($data['delta'] as $tkr => $delta) {
-			$tdnav += $dnav = $delta['in'] - $delta['out'] - $delta['realized'];
+			$dnav = $delta['in'] - $delta['out'] - $delta['realized'];
+			if(!$dnav) continue;
 
-			if($dnav) {
-				if(!isset($flows[$tkr])) {
-					$flows[$tkr] = [];
-				}
+			if(!isset($flows[$tkr])) $flows[$tkr] = [];
 
-				$flows[$tkr][] = [ $t, $dnav ];
-			}
+			$flows[$tkr][] = [ $t, $dnav ];
+			$flows['__total__'][] = [ $t, $dnav ];
 		}
 
-		if($tdnav) {
-			$flows['__total__'][] = [ $t, $tdnav ];
+		foreach($data['bdelta'] as $tkr => $delta) {
+			$dnav = $delta['in'] - $delta['out'] - $delta['realized'];
+			if(!$dnav) continue;
+			$flows['__bench__'][] = [ $t, $dnav ];
 		}
 	}
 
-	foreach($flows as &$f) {
+	foreach($flows as $k => $f) {
+		if($f === []) unset($flows[$k]);
+	}
+
+	foreach($flows as $TICK => &$f) {
 		$c = count($f);
 		assert($c >= 2);
 

@@ -237,6 +237,7 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 	$ftable = [];
 	$ftotal = [ 'Ticker' => 'TOT' ];
+	$fbench = [ 'Ticker' => 'BNCH' ];
 	$sortdata = [];
 
 	foreach($periods as $i => $p) {
@@ -248,6 +249,8 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 				if($tkr === '__total__') {
 					$ftotal[$k] = $pc;
+				} else if($tkr === '__bench__') {
+					$fbench[$k] = $pc;
 				} else {
 					$ftable[$tkr][$k] = $pc;
 					$sortdata[$tkr][$k] = $irr;
@@ -259,9 +262,12 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 				return $val;
 			};
 
+			/* Cannot use aggregate_tx, we need the deltas */
 			$agg = $iteratorLast(iterate_time($pf, $start, $end, '+'.($end - $start).' seconds'));
 			$totalpl = 0;
 			$totalbasis = 0;
+			$benchpl = 0;
+			$benchbasis = 0;
 
 			foreach($agg['agg'] as $tkr => $a) {
 				if($a['qty'] < 1e-5 && !isset($agg['delta'][$tkr])) continue;
@@ -286,11 +292,36 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 				$totalbasis += $a['in'] - $a['out'];
 			}
 
+			/* XXX: refactor me */
+			foreach($agg['bagg'] as $tkr => $a) {
+				if($a['qty'] < 1e-5 && !isset($agg['delta'][$tkr])) continue;
+				$delta = $agg['bdelta'][$tkr] ?? [ 'realized' => 0, 'qty' => 0, 'in' => 0, 'out' => 0 ];
+
+				$pl = $delta['realized'];
+				if($a['qty'] > 1e-5) {
+					$pl += get_quote($pf, $tkr, $end) * $a['qty'] - ($a['in'] - $a['out']);
+				} else assert($a['in'] - $a['out'] < 1e-5);
+				if($a['qty'] - $delta['qty'] > 1e-5) {
+					$pl -= (get_quote($pf, $tkr, $start) * ($a['qty'] - $delta['qty']) - ($a['in'] - $delta['in'] - ($a['out'] - $delta['out'])));
+				} else assert($a['in'] - $delta['in'] - ($a['out'] - $delta['out']) < 1e-5);
+
+				$benchpl += $pl;
+				$benchbasis += $a['in'] - $a['out'];
+			}
+
 			if($totalpl !== 0) {
 				$ftotal[$k] = colorize_percentage(
 					$totalbasis > 0 ? (100.0 * $totalpl / $totalbasis) : 0.0,
 					$valfmt,
 					null, null, null, null, $totalpl
+				);
+			}
+
+			if($benchpl !== 0) {
+				$fbench[$k] = colorize_percentage(
+					$benchbasis > 0 ? (100.0 * $benchpl / $benchbasis) : 0.0,
+					$valfmt,
+					null, null, null, null, $benchpl
 				);
 			}
 		}
@@ -336,4 +367,9 @@ function perf(array &$pf, $type = 'irr', $date = 'now', $columns = 'default', $r
 
 	print_sep($fmt);
 	print_row($fmt, $ftotal);
+
+	if($pf['benchmark'] ?? [] !== []) {
+		print_sep($fmt);
+		print_row($fmt, $fbench);
+	}
 }

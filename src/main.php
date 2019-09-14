@@ -122,7 +122,7 @@ case 'plot-gains':
 	break;
 
 case 'plot-lines':
-	plot_lines($pf, $args['start'] ?? '-2 years', $args['end'] ?? 'now', $args['absolute'] ?? true, $args['total'] ?? true);
+	plot_lines($pf, $args['start'] ?? '-2 years', $args['end'] ?? 'now', $args['lines'] ?? 'all', $args['absolute'] ?? true, $args['total'] ?? true, $args['benchmark'] ?? true);
 	break;
 
 case 'get-quote':
@@ -168,6 +168,25 @@ case 'prune-history':
 	notice("Done, pruned %d entries from history\n", $pruned);
 	break;
 
+case 'set-benchmark':
+	$s = 0.0;
+	foreach($args as $ticker => &$weight) {
+		if(!isset($pf['lines'][$ticker])) {
+			fatal("Unknown ticker %s\n", $ticker);
+		}
+		$weight = floatval($weight);
+		$s += $weight;
+	}
+	if($args !== []) {
+		if(abs($s - 1.0) >= 0.0001) {
+			notice("Warning: benchmark weights do not add up to 1.0 (have %.4f)\n", $s);
+		}
+		$pf['benchmark'] = $args;
+	} else {
+		unset($pf['benchmark']);
+	}
+	break;
+
 case 'version':
 case '-v':
 case '--version':
@@ -197,9 +216,10 @@ case '--help':
 	fwrite(STDERR, "pfm ls-tx [ticker:<ticker>] [before:<date>] [after:<date>]\n");
 	fwrite(STDERR, "pfm get-quote ticker:<ticker> [at:<date>]\n");
 	fwrite(STDERR, "pfm plot-gains [start:<date>] [end:<date>] [absolute:1|0]\n");
-	fwrite(STDERR, "pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [total:1|0]\n");
+	fwrite(STDERR, "pfm plot-lines [start:<date>] [end:<date>] [absolute:1|0] [lines:all|none|ticker1,ticker2,…] [total:1|0] [benchmark:1|0]\n");
 	fwrite(STDERR, "pfm quotes-to-gnucash <file.gnucash>\n");
 	fwrite(STDERR, "pfm prune-history [tickers:<ticker>,…] [except:<ticker>,…] [from:<date>] [to:<date>]\n");
+	fwrite(STDERR, "pfm set-benchmark [<ticker1>:<weight1>] [<ticker2>:<weight2>] …\n");
 	break;
 
 default:

@@ -26,7 +26,13 @@ function rm_line(array &$pf, $ticker) {
 			fatal("Line %s still has transactions, cannot remove\n", $ticker);
 		}
 	}
-	
+
+	foreach($pf['benchmark'] ?? [] as $bt => $w) {
+		if($bt === $ticker) {
+			fatal("Line %s is used in the benchmark, cannot remove\n", $ticker);
+		}
+	}
+
 	unset($pf['lines'][$ticker]);
 }
 
@@ -41,7 +47,7 @@ function ls_lines(array &$pf) {
 	print_header($fmt);
 	print_sep($fmt);
 
-	
+
 	foreach($pf['lines'] as $line) {
 		print_row($fmt, [
 			'Name' => shorten_name($line['name'], 52),
@@ -66,7 +72,7 @@ function edit_line(array &$pf, $ticker, array $newvalues) {
 }
 
 function shorten_name($name, $targetlength) {
-	if(strlen($name) <= $targetlength) return $name;	
+	if(strlen($name) <= $targetlength) return $name;
 	$parts = explode(' ', $name);
 	$nparts = count($parts);
 
@@ -74,7 +80,7 @@ function shorten_name($name, $targetlength) {
 		$longestk = null;
 		$longestl = 0;
 		$length = $nparts - 1;
-		
+
 		foreach($parts as $k => $w) {
 			$l = strlen($w);
 			if($l > 3 && $l >= $longestl) {
@@ -89,7 +95,7 @@ function shorten_name($name, $targetlength) {
 			$length -= $longestl;
 			$length += 3;
 		}
-		
+
 	} while($length > $targetlength && $longestk !== null);
 
 	return substr(implode(' ', $parts), 0, $targetlength);
