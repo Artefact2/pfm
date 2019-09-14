@@ -169,18 +169,18 @@ case 'prune-history':
 	break;
 
 case 'set-benchmark':
+	$s = 0.0;
 	foreach($args as $ticker => &$weight) {
-		$s = 0.0;
 		if(!isset($pf['lines'][$ticker])) {
 			fatal("Unknown ticker %s\n", $ticker);
 		}
 		$weight = floatval($weight);
 		$s += $weight;
 	}
-	if(abs($s - 1.0) >= 0.0001) {
-		notice("Warning: benchmark weights do not add up to 1.0 (have %.4f)\n", $s);
-	}
 	if($args !== []) {
+		if(abs($s - 1.0) >= 0.0001) {
+			notice("Warning: benchmark weights do not add up to 1.0 (have %.4f)\n", $s);
+		}
 		$pf['benchmark'] = $args;
 	} else {
 		unset($pf['benchmark']);
