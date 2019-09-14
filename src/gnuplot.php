@@ -112,7 +112,7 @@ function plot_lines(array &$pf, $start, $end, $lines = 'all', $absolute = true, 
 	fwrite($sf, "show grid\n");
 	fwrite($sf, "set key inside top left\n");
 
-	if(!$absolute) {
+	if(!$absolute && !$benchmark) {
 		fwrite($sf, "set yrange [0:*<100]\n");
 	}
 
@@ -151,10 +151,10 @@ function plot_lines(array &$pf, $start, $end, $lines = 'all', $absolute = true, 
 	}
 
 	if($total) {
-		$plots[] = sprintf("'%s' using (column('Timestamp')):(%s) with lines title 'Total' linewidth 2", $dat, $absolute ? $totstr : '1.0');
+		$plots[] = sprintf("'%s' using (column('Timestamp')):(%s) with lines title 'Total' linewidth 2", $dat, $absolute ? $totstr : '100.0');
 	}
 	if($benchmark) {
-		$plots[] = sprintf("'%s' using (column('Timestamp')):(column('__bench__')) with lines title 'Benchmark' linewidth 2", $dat);
+		$plots[] = sprintf("'%s' using (column('Timestamp')):(column('__bench__')/(%s)) with lines title 'Benchmark' linewidth 2", $dat, $absolute ? '1.0' : '0.01*('.$totstr.')');
 	}
 
 	fprintf($sf, "plot %s\n", implode(', ', $plots));
