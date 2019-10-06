@@ -31,7 +31,12 @@ function load_pf($path) {
 		});
 
 		usort($pf['tx'], function($a, $b) {
-			return $a['ts'] <=> $b['ts'];
+			foreach([ 'ts', 'buy', 'price' ] as $k) {
+				if($a[$k] !== $b[$k]) {
+					return $a[$k] <=> $b[$k];
+				}
+			}
+			assert(0);
 		});
 
 		return $pf;
