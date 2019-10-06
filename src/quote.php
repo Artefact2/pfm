@@ -32,14 +32,12 @@ function get_quote(array &$pf, string $ticker, string $date = 'now'): float {
 	if($q !== null) return $q;
 
 	/* XXX */
-	//$brsh = get_boursorama_history($isin);
 	$bdh = get_bd_history($isin, $ticker, $pf['lines'][$ticker]['currency']);
 
 	$pf['hist'][$ticker] = merge_histories(
 		$ticker,
 		$pf['hist'][$ticker],
 		$bdh
-		//merge_histories($ticker, $bdh, $brsh)
 	);
 
 	unset($pf['hist'][$ticker][$today]);
@@ -103,32 +101,6 @@ function get_boursorama_rt_quote($isin): ?float {
 		});
 }
 
-function get_boursorama_history(string $isin): array {
-	return get_cached_thing('brs-hist-'.$isin, strtotime('tomorrow'), function() use($isin): array {
-			$ticker = get_boursorama_ticker($isin);
-			if($ticker === null) return [];
-
-			$c = get_curl('https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?'.http_build_query([
-				'symbol' => $ticker,
-				'length' => 7300,
-				'period' => 0,
-				'guid' => '',
-			]));
-			curl_setopt($c, CURLOPT_HTTPHEADER, [
-				'X-Requested-With: XMLHttpRequest',
-			]);
-			fwrite(STDOUT, '.');
-			$r = curl_exec($c);
-			$d = json_decode($r, true);
-
-			foreach($d['d']['QuoteTab'] as $row) {
-				$hist[gmdate('Y-m-d', 86400 * (int)$row['d'])] = (float)$row['c'];
-			}
-
-			return $hist;
-		});
-}
-
 function get_bd_id(string $isin, string $ticker, string $currency): ?array {
 	return get_cached_thing('bd-id-'.$isin, -31557600, function() use($isin, $ticker, $currency): ?array {
 		$c = get_curl('https://www.boursedirect.fr/api/search/'.$isin);
@@ -162,7 +134,6 @@ function get_bd_history(string $isin, string $ticker, string $currency): array {
 
 				$hist[date('Y-m-d', strtotime(substr($date, 1, -1)))] = floatval($close);
 			}
-			fix_splits($isin, $hist);
 			return $hist;
 		});
 }
@@ -225,40 +196,6 @@ function prev_open_day(int $ts): int {
 function find_in_history(array $hist, int $ts): ?float {
 	$ts = prev_open_day($ts);
 	return $hist[date('Y-m-d', prev_open_day($ts))] ?? null;
-}
-
-/* XXX: this is just heuristics */
-function fix_splits(string $isin, array &$h): void {
-	$prev = null;
-	foreach($h as $k => $v) {
-		if(!$v) continue;
-
-		if($prev === null) {
-			$prev = $v;
-			continue;
-		}
-
-		if($v / $prev > 3) {
-			$m = round($v / $prev);
-			assert(abs($v / $prev - $m) < .2);
-			notice("detected merge (%.0f:1) for %s at date %s\n", $m, $isin, $k);
-			$m = 1.0 / $m;
-		} else if($v / $prev < .33333) {
-			$m = round($prev / $v);
-			assert(abs($prev / $v - $m) < .2);
-			notice("detected split (1:%.0f) for %s at date %s\n", $m, $isin, $k);
-		} else {
-			$prev = $v;
-			continue;
-		}
-
-		foreach($h as $k2 => &$v2) {
-			if($k === $k2) break;
-			$v2 /= $m;
-		}
-
-		$prev = $v;
-	}
 }
 
 function merge_histories(string $ticker, array $h1, array $h2): array {

@@ -79,3 +79,14 @@ pfm add-tx ticker:FOO buy:0.1234 fee:-45.67 total:0
 # Management fee of €1.23
 pfm add-tx ticker:FOO sell:0.4567 fee:1.23 total:0
 ~~~
+
+Stock splits or merges:
+
+~~~
+# Own 10 shares of FOO, has a 1:5 split
+pfm add-tx ticker:FOO buy:40 price:0 total:0
+
+# Own 100 shares of FOO, has a 1:7 split
+pfm add-tx ticker:FOO sell:2 price:12.34 fee:0
+pfm add-tx ticker:FOO sell:84 price:0 total:0
+~~~
